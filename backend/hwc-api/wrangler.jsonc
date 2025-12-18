@@ -1,0 +1,36 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "hwc-api",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	"preview_urls": false,
+	"workers_dev": false,
+	"routes": [
+		{
+			"custom_domain": true,
+			"pattern": "api-hwc.phake.app"
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_id": "3329bf2b-de13-40aa-a350-4c44491f661d",
+			"database_name": "prod-hotwheels-collection",
+			"preview_database_id": "3329bf2b-de13-40aa-a350-4c44491f661d",
+			"migrations_dir": "drizzle/migrations",
+			"remote": true
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "BUCKET",
+			"bucket_name": "prod-hotwheels-collection",
+			"preview_bucket_name": "prod-hotwheels-collection",
+			"remote": true
+		}
+	]
+}
