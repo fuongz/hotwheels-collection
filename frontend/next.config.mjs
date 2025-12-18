@@ -2,7 +2,7 @@
 const nextConfig = {
 	images: {
 		unoptimized: true,
-		domains: ["cdn-hwc.phake.app"],
+		remotePatterns: [new URL("https://cdn-hwc.phake.app/**")],
 	},
 };
 

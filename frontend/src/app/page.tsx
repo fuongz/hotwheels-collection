@@ -4,7 +4,7 @@ import { CryingIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Flame } from "lucide-react";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { CarCard } from "@/components/car-card";
 import { CollectionFilters } from "@/components/collection-filters";
 import {
@@ -20,7 +20,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useCars } from "@/hooks/use-cars";
 import type { Car } from "@/types/car";
 
-export default function CollectionPage() {
+function CollectionPageContent() {
 	const [currentPage, setCurrentPage] = useQueryState(
 		"page",
 		parseAsInteger.withDefault(1),
@@ -241,5 +241,24 @@ export default function CollectionPage() {
 				)}
 			</main>
 		</div>
+	);
+}
+
+export default function CollectionPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="container mx-auto px-4 pb-6">
+					<div className="text-center py-16">
+						<Spinner size="xl" />
+						<h3 className="text-lg mt-2 font-medium text-foreground mb-2">
+							Loading...
+						</h3>
+					</div>
+				</div>
+			}
+		>
+			<CollectionPageContent />
+		</Suspense>
 	);
 }
