@@ -14,7 +14,7 @@ export function CarCard({ car }: CarCardProps) {
 		<Card
 			className={`group overflow-hidden transition-all duration-300 hover:scale-[1.02] p-0`}
 		>
-			<div className="relative aspect-[3/2] overflow-hidden">
+			<div className="relative aspect-[16/9] overflow-hidden">
 				<Image
 					src={car.avatarUrl || "/placeholder.svg"}
 					alt={car.model}

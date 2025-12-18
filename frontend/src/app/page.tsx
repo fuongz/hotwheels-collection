@@ -1,8 +1,7 @@
 "use client";
 
-import { CryingIcon } from "@hugeicons/core-free-icons";
+import { CryingIcon, Fire02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Flame } from "lucide-react";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { Suspense, useMemo } from "react";
 import { CarCard } from "@/components/car-card";
@@ -29,6 +28,10 @@ function CollectionPageContent() {
 	const [sortBy, setSortBy] = useQueryState("sortBy", parseAsString);
 	const [sortOrder, setSortOrder] = useQueryState("sortOrder", parseAsString);
 	const [q, setQ] = useQueryState("q", parseAsString);
+	const [gridColumns, setGridColumns] = useQueryState(
+		"cols",
+		parseAsInteger.withDefault(4),
+	);
 	const limit = 24;
 
 	const {
@@ -60,21 +63,26 @@ function CollectionPageContent() {
 					sortBy={sortBy}
 					sortOrder={sortOrder}
 					search={q}
+					searchLoading={isLoading}
+					gridColumns={gridColumns}
 					onYearChange={(value) => {
 						setYear(value);
-						setCurrentPage(1); // Reset to first page when filtering
+						setCurrentPage(1);
 					}}
 					onSortByChange={(value) => {
 						setSortBy(value);
-						setCurrentPage(1); // Reset to first page when sorting
+						setCurrentPage(1);
 					}}
 					onSortOrderChange={(value) => {
 						setSortOrder(value);
-						setCurrentPage(1); // Reset to first page when changing order
+						setCurrentPage(1);
 					}}
 					onSearchChange={(value) => {
 						setQ(value);
-						setCurrentPage(1); // Reset to first page when searching
+						setCurrentPage(1);
+					}}
+					onGridColumnsChange={(value) => {
+						setGridColumns(value);
 					}}
 				/>
 			</section>
@@ -98,7 +106,10 @@ function CollectionPageContent() {
 				{isError && (
 					<div className="text-center py-16">
 						<div className="p-4 rounded-full bg-destructive/10 inline-block mb-4">
-							<Flame className="h-8 w-8 text-destructive" />
+							<HugeiconsIcon
+								icon={Fire02Icon}
+								className="h-8 w-8 text-destructive"
+							/>
 						</div>
 						<h3 className="text-lg font-medium text-foreground mb-2">
 							Failed to load cars
@@ -148,7 +159,17 @@ function CollectionPageContent() {
 							</p>
 						</div>
 
-						<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+						<div
+							className={`grid gap-4 ${
+								gridColumns === 3
+									? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
+									: gridColumns === 4
+										? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+										: gridColumns === 5
+											? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+											: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+							}`}
+						>
 							{carsData.map((car) => (
 								<CarCard key={car.id} car={car} />
 							))}
