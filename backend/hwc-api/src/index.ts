@@ -2,7 +2,6 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import z from "zod";
-import { ScrapeTableSpider } from "../scripts/scrape";
 import { dbClient } from "./db/d1/index";
 import { CarsRepository } from "./db/d1/repositories/cars_repository";
 
@@ -10,23 +9,23 @@ const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 app.use(
 	cors({
-		origin: ["http://localhost:3001"],
+		origin: ["http://localhost:3001", "https://hotwheels.phake.app"],
 		allowMethods: ["GET"],
 		allowHeaders: ["Content-Type"],
 	}),
 );
 
-app.get("/sync/:year", async ({ json, env, req }) => {
-	try {
-		const { year } = req.param();
-		const spider = new ScrapeTableSpider(env.DB, env.BUCKET);
-		await spider.startRequests(year);
-		return json({ message: "OK" });
-	} catch (err: any) {
-		console.log(err);
-		return json(err.message, 500);
-	}
-});
+// app.get("/sync/:year", async ({ json, env, req }) => {
+// 	try {
+// 		const { year } = req.param();
+// 		const spider = new ScrapeTableSpider(env.DB, env.BUCKET);
+// 		await spider.startRequests(year);
+// 		return json({ message: "OK" });
+// 	} catch (err: any) {
+// 		console.log(err);
+// 		return json(err.message, 500);
+// 	}
+// });
 
 app.get(
 	"/v1/cars",
