@@ -25,6 +25,13 @@
 			"remote": true
 		}
 	],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "3233a414a4db40ee8615a48c6de6ea67",
+			"preview_id": "3233a414a4db40ee8615a48c6de6ea67",
+		}
+	],
 	"r2_buckets": [
 		{
 			"binding": "BUCKET",

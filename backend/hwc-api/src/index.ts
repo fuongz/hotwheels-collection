@@ -2,8 +2,10 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import z from "zod";
-import { dbClient } from "./db/d1/index";
+import { ScrapeTableSpider } from "../scripts/scrape";
+import { auth } from "./auth";
 import { CarsRepository } from "./db/d1/repositories/cars_repository";
+import { authMiddleware } from "./middlewares/auth-middleware";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -15,17 +17,21 @@ app.use(
 	}),
 );
 
-// app.get("/sync/:year", async ({ json, env, req }) => {
-// 	try {
-// 		const { year } = req.param();
-// 		const spider = new ScrapeTableSpider(env.DB, env.BUCKET);
-// 		await spider.startRequests(year);
-// 		return json({ message: "OK" });
-// 	} catch (err: any) {
-// 		console.log(err);
-// 		return json(err.message, 500);
-// 	}
-// });
+app.on(["POST", "GET"], "/api/auth/*", (c) => {
+	return auth(c.env).handler(c.req.raw);
+});
+
+app.get("/sync/:year", authMiddleware, async ({ json, env, req }) => {
+	try {
+		const { year } = req.param();
+		const spider = new ScrapeTableSpider(env);
+		await spider.startRequests(year);
+		return json({ message: "OK" });
+	} catch (err: any) {
+		console.log(err);
+		return json(err.message, 500);
+	}
+});
 
 app.get(
 	"/v1/cars",
@@ -43,23 +49,15 @@ app.get(
 	async ({ json, env, req }) => {
 		try {
 			const { page, limit, sortBy, sortOrder, year, q } = req.valid("query");
-			const db = dbClient(env.DB);
-			const carsRepo = new CarsRepository(db);
-			const cars = await carsRepo.paginate(
-				parseInt(page, 10),
-				parseInt(limit, 10),
-				{
+			const carsRepo = new CarsRepository(env);
+			return json(
+				await carsRepo.paginate(parseInt(page, 10), parseInt(limit, 10), {
 					sortBy,
 					sortOrder,
 					year,
 					q,
-				},
+				}),
 			);
-			const total = await carsRepo.count({ year, q });
-			return json({
-				data: cars,
-				meta: { page: parseInt(page, 10), limit: parseInt(limit, 10), total },
-			});
 		} catch (err: any) {
 			console.log(err);
 			return json({ error: err.message }, 500);

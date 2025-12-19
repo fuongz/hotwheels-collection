@@ -1,10 +1,28 @@
-import { and, eq, like, or } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-import { orderBuilder, wheresBuilder } from "../builder";
-import { type Car, cars, type NewCar } from "../schema";
+import { CacheService } from "../../../cache/kv/cache.service";
+import { dbClient } from "..";
+import {
+	type Car,
+	carSeries,
+	cars,
+	type NewCar,
+	type Series,
+	series,
+} from "../schema";
+
+type CarWithSeries = Partial<Car> & {
+	series: Partial<Series>[];
+};
 
 export class CarsRepository {
-	constructor(private db: DrizzleD1Database) {}
+	private db: DrizzleD1Database;
+	private cache: CacheService;
+
+	constructor(env: CloudflareBindings) {
+		this.db = dbClient(env.DB);
+		this.cache = new CacheService(env.KV);
+	}
 
 	async upsert(
 		data: Omit<NewCar, "id" | "createdAt" | "updatedAt">,
@@ -31,33 +49,6 @@ export class CarsRepository {
 		return created;
 	}
 
-	async findByToyCode(toyCode: string): Promise<Car | undefined> {
-		return await this.db
-			.select()
-			.from(cars)
-			.where(eq(cars.toyCode, toyCode))
-			.get();
-	}
-
-	async findById(id: string): Promise<Car | undefined> {
-		return await this.db.select().from(cars).where(eq(cars.id, id)).get();
-	}
-
-	async getAll(): Promise<Car[]> {
-		return await this.db.select().from(cars).all();
-	}
-
-	async count(
-		params: Record<string, string | any[] | undefined>,
-	): Promise<number> {
-		const { q, ...rest } = params;
-		const wheres = wheresBuilder(cars, rest);
-		if (q) {
-			wheres.push(or(like(cars.model, `%${q}%`), like(cars.toyCode, `%${q}%`)));
-		}
-		return await this.db.$count(cars, and(...wheres));
-	}
-
 	async findByYear(year: string): Promise<Car[]> {
 		return await this.db.select().from(cars).where(eq(cars.year, year)).all();
 	}
@@ -72,30 +63,139 @@ export class CarsRepository {
 	async paginate(
 		page: number,
 		limit: number,
-		query: Partial<{
-			sortBy: string;
-			sortOrder: string;
-		}> &
-			Record<string, string | any[] | undefined>,
-	): Promise<Car[]> {
-		const { sortBy, sortOrder, q, ...whereQueries } = query;
-		const wheres = wheresBuilder(cars, whereQueries);
-		if (q) {
-			wheres.push(or(like(cars.model, `%${q}%`), like(cars.toyCode, `%${q}%`)));
-		}
-		const sortParams = orderBuilder(
-			cars,
-			sortBy || "updated_at",
-			sortOrder || "asc",
-		);
+		query: {
+			sortBy?: string;
+			sortOrder?: string;
+			q?: string;
+			year?: string;
+		},
+	): Promise<{
+		data: CarWithSeries[];
+		meta: { page: number; limit: number; total: number };
+	}> {
+		const cacheKey = `list:${JSON.stringify({ page, limit, query })}`;
+		const { sortBy, sortOrder, ...whereQueries } = query;
+
+		// --------------------
+		// -- check cache first
+		const cached = await this.cache.get<{
+			data: CarWithSeries[];
+			meta: { page: number; limit: number; total: number };
+		}>(cacheKey);
+
+		// -- return cache
+		if (cached) return cached;
+		// --------------------
+
 		const offset = (page - 1) * limit;
-		const response = await this.db
-			.select()
-			.from(cars)
-			.where(and(...wheres))
-			.offset(offset)
-			.limit(limit)
-			.orderBy(sortParams);
-		return response.map((car) => this.transformCar(car));
+		const conditions = [];
+
+		// -- where queries
+		if (whereQueries.q) {
+			const searchPattern = `%${whereQueries.q}%`;
+			conditions.push(
+				sql`(c.model LIKE ${searchPattern} OR c.toy_code LIKE ${searchPattern})`,
+			);
+		}
+		if (whereQueries.year) {
+			conditions.push(sql`c.year = ${whereQueries.year}`);
+		}
+
+		// -- count query
+		let countQuery = sql`
+SELECT COUNT(DISTINCT c.id) as total
+FROM ${cars} c`;
+
+		// -- data query
+		let sqlQuery = sql`
+SELECT
+	c.id,
+	c.model,
+	c.year,
+	c.toy_code as toyCode,
+	c.toy_index as toyIndex,
+	c.avatar_url as avatarUrl,
+	c.created_at as createdAt,
+	c.updated_at as updatedAt,
+	COALESCE(
+		json_group_array(
+			CASE
+			WHEN col.id IS NOT NULL
+			THEN json_object(
+				'id', col.id,
+				'name', col.name,
+				'seriesNum', col.series_num,
+				'createdAt', col.created_at,
+				'updatedAt', col.updated_at
+			)
+			END
+		) FILTER (WHERE col.id IS NOT NULL),
+		json_array()
+	) as series
+FROM ${cars} c
+LEFT JOIN ${carSeries} cc ON c.id = cc.car_id
+LEFT JOIN ${series} col ON cc.series_id = col.id
+		`;
+
+		// -- apply conditions
+		if (conditions.length > 0) {
+			countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
+			sqlQuery = sql`${sqlQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
+		}
+
+		// -- group by
+		sqlQuery = sql`${sqlQuery} GROUP BY c.id, c.model, c.created_at, c.updated_at`;
+
+		// -- map column names to SQL column references
+		const columnMap: Record<string, string> = {
+			model: "c.model",
+			year: "c.year",
+			toyCode: "c.toy_code",
+			toyIndex: "c.toy_index",
+			createdAt: "c.created_at",
+			updatedAt: "c.updated_at",
+		};
+
+		const orderColumn = sortBy || "updated_at";
+		const orderDirection = (sortOrder || "desc").toUpperCase();
+		const sqlColumn = columnMap[orderColumn] || "c.model";
+
+		// -- apply order by, use from `sortBy` and `sortOrder` query params
+		sqlQuery = sql`${sqlQuery} ORDER BY ${sql.raw(sqlColumn)} ${sql.raw(orderDirection)}`;
+
+		// -- apply limit and offset, use from `page` and `limit` query params
+		sqlQuery = sql`${sqlQuery} LIMIT ${sql.raw(limit.toString())} OFFSET ${sql.raw(offset.toString())}`;
+
+		// -- execute both queries: one for count and one for data
+		const [countResult, result] = await Promise.all([
+			this.db.run(countQuery),
+			this.db.run(sqlQuery),
+		]);
+
+		const total = (countResult.results[0] as any)?.total || 0;
+
+		const carsWithSeries: CarWithSeries[] = (result.results as any[]).map(
+			(row) => ({
+				id: row.id,
+				model: row.model,
+				year: row.year,
+				toyCode: row.toyCode,
+				toyIndex: row.toyIndex,
+				avatarUrl: row.avatarUrl,
+				seriesNum: row.seriesNum,
+				createdAt: row.createdAt,
+				updatedAt: row.updatedAt,
+				series: JSON.parse(row.series).map((col: any) => ({
+					...col,
+					createdAt: col.createdAt,
+				})),
+			}),
+		);
+		const response = {
+			data: carsWithSeries,
+			meta: { page, limit, total },
+		};
+		await this.cache.set(cacheKey, response, 300);
+		return response;
 	}
 }

@@ -41,14 +41,14 @@ class ScrapeTableSpider {
 	private existingSeriesMap: Map<string, any> = new Map();
 	private existingCarSeriesMap: Map<string, any> = new Map();
 
-	constructor(d1Database?: D1Database, bucket?: R2Bucket) {
-		if (d1Database) {
-			this.db = dbClient(d1Database);
-			this.carsRepo = new CarsRepository(this.db);
+	constructor(env: CloudflareBindings) {
+		if (env.DB) {
+			this.db = dbClient(env.DB);
+			this.carsRepo = new CarsRepository(env);
 			this.seriesRepo = new SeriesRepository(this.db);
 			this.carSeriesRepo = new CarSeriesRepository(this.db);
 		}
-		this.bucket = bucket;
+		this.bucket = env.BUCKET;
 	}
 
 	async startRequests(year: string): Promise<void> {
