@@ -47,7 +47,7 @@ function CollectionPageContent() {
 		const cdnUrl = process.env.NEXT_PUBLIC_CDN_URL || "";
 		return apiCars.map((car: Car) => ({
 			...car,
-			avatarUrl: `${cdnUrl}${car.avatarUrl}`,
+			avatarUrl: `${cdnUrl}${car.avatarUrl.replace("r2://", "/")}`,
 		}));
 	}, [apiCars]);
 

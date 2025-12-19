@@ -1,3 +1,11 @@
+export interface Series {
+	id: string;
+	name: string;
+	seriesNum: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface Car {
 	id: string;
 	toyCode: string;
@@ -5,6 +13,7 @@ export interface Car {
 	model: string;
 	avatarUrl: string;
 	year: string;
+	series: Series[];
 	createdAt: string;
 	updatedAt: string;
 }

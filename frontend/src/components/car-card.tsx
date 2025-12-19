@@ -19,6 +19,7 @@ export function CarCard({ car }: CarCardProps) {
 					src={car.avatarUrl || "/placeholder.svg"}
 					alt={car.model}
 					fill
+					loading="eager"
 					className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-105`}
 				/>
 				{/* Year Badge */}
@@ -49,6 +50,16 @@ export function CarCard({ car }: CarCardProps) {
 						<span className="text-xs text-muted-foreground">
 							#{car.toyCode}
 						</span>
+					</div>
+					<div className="flex items-center gap-2 justify-between">
+						{car.series?.map((s) => (
+							<span
+								className="text-xs px-1.5 py-0.5 text-muted-foreground"
+								key={s.id}
+							>
+								{s.name}
+							</span>
+						))}
 					</div>
 				</div>
 			</CardContent>
