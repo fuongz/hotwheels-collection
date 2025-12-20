@@ -1,6 +1,6 @@
 export class CacheService {
 	private kv: KVNamespace;
-	private defaultTtl: number = 60 * 5;
+	private defaultTtl: number = 60 * 60 * 24 * 7;
 
 	constructor(kv: KVNamespace) {
 		this.kv = kv;

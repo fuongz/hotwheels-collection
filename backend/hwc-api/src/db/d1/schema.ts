@@ -13,6 +13,7 @@ export const series = sqliteTable("series", {
 		.$defaultFn(() => `series_${nanoid()}`),
 	name: text("name").notNull().unique(),
 	seriesNum: text("series_num"),
+	wikiSlug: text("wiki_slug"),
 	createdAt: integer("created_at", { mode: "timestamp" })
 		.$defaultFn(() => new Date())
 		.notNull(),
@@ -30,6 +31,7 @@ export const cars = sqliteTable(
 		toyCode: text("toy_code").notNull().unique(),
 		toyIndex: text("toy_index").notNull(),
 		model: text("model").notNull(),
+		wikiSlug: text("wiki_slug"),
 		avatarUrl: text("avatar_url"),
 		year: text("year").notNull(),
 		createdAt: integer("created_at", { mode: "timestamp" })

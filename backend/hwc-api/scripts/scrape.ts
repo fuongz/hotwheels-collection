@@ -1,16 +1,13 @@
-import { type DrizzleD1Database, drizzle } from "drizzle-orm/d1";
 import { parse } from "parse5";
-import { CarSeriesRepository } from "../src/db/d1/repositories/car_series_repository";
-import { CarsRepository } from "../src/db/d1/repositories/cars_repository";
-import { SeriesRepository } from "../src/db/d1/repositories/series_repository";
-import { generatePhotoKey, uploadImageToR2 } from "../src/storages/r2";
-import { dbClient } from "../src/db/d1";
+import { CacheService } from "../src/cache/kv/cache.service";
+import { writeFileSync, mkdirSync } from "node:fs";
+import dayjs from "dayjs";
 
 type Parse5Node = {
-	nodeName: string;
-	childNodes?: Parse5Node[];
-	attrs?: Array<{ name: string; value: string }>;
-	value?: string;
+  nodeName: string;
+  childNodes?: Parse5Node[];
+  attrs?: Array<{ name: string; value: string }>;
+  value?: string;
 };
 
 /**
@@ -18,440 +15,340 @@ type Parse5Node = {
  * scrape the resulting page in the
  * url pattern wiki/List_of_{year}_Hot_Wheels
  */
-
-interface HotWheelData {
-	toy_num: string;
-	col_num: string;
-	model: string;
-	series: string[];
-	series_num: string;
-	photo_url: string[];
-	year: string;
-}
-
 class ScrapeTableSpider {
-	name = "scrape-table";
-	private db?: DrizzleD1Database;
-	private bucket?: R2Bucket;
-	private carsRepo?: CarsRepository;
-	private seriesRepo?: SeriesRepository;
-	private carSeriesRepo?: CarSeriesRepository;
-	// Cache to avoid repeated database queries
-	private existingCarsMap: Map<string, any> = new Map();
-	private existingSeriesMap: Map<string, any> = new Map();
-	private existingCarSeriesMap: Map<string, any> = new Map();
+  private cacheService?: CacheService;
 
-	constructor(env: CloudflareBindings) {
-		if (env.DB) {
-			this.db = dbClient(env.DB);
-			this.carsRepo = new CarsRepository(env);
-			this.seriesRepo = new SeriesRepository(this.db);
-			this.carSeriesRepo = new CarSeriesRepository(this.db);
-		}
-		this.bucket = env.BUCKET;
-	}
+  constructor(env: CloudflareBindings) {
+    if (env.KV) {
+      this.cacheService = new CacheService(env.KV);
+    }
+  }
 
-	async startRequests(year: string): Promise<void> {
-		// Load existing data into cache to avoid repeated DB queries
-		await this.loadExistingDataToCache(year);
+  async startRequests(year: string): Promise<Record<string, HotWheelData[]>> {
+    // Load existing data into cache to avoid repeated DB queries
+    // await this.loadExistingDataToCache(year);
+    const response: Record<string, HotWheelData[]> = {};
+    const urls = [
+      `https://hotwheels.fandom.com/wiki/List_of_${year}_Hot_Wheels`,
+    ];
+    for (const url of urls) {
+      const result = await this.parse(url, year);
+      response[url] = result;
+    }
+    return response;
+  }
 
-		const urls = [
-			`https://hotwheels.fandom.com/wiki/List_of_${year}_Hot_Wheels`,
-		];
-		for (const url of urls) {
-			await this.parse(url, year);
-		}
-	}
+  // Helper method to check if a node is an Element
+  private isElement(node: Parse5Node): boolean {
+    return node.nodeName !== "#text" && node.nodeName !== "#comment";
+  }
 
-	// Load all existing cars, series, and relationships for the year into cache
-	private async loadExistingDataToCache(year: string): Promise<void> {
-		if (!this.carsRepo || !this.seriesRepo) return;
+  // Find elements by class name
+  private findElementsByClass(
+    node: Parse5Node,
+    className: string
+  ): Parse5Node[] {
+    const results: Parse5Node[] = [];
 
-		console.log(`----> LOG [Cache] Loading existing data for year ${year}...`);
+    const traverse = (currentNode: Parse5Node) => {
+      if (this.isElement(currentNode)) {
+        const attrs = currentNode.attrs || [];
+        const classAttr = attrs.find(
+          (attr: { name: string; value: string }) => attr.name === "class"
+        );
+        if (classAttr?.value.split(" ").includes(className)) {
+          results.push(currentNode);
+        }
+      }
 
-		// Load all cars for the year
-		const existingCars = await this.carsRepo.findByYear(year);
-		for (const car of existingCars) {
-			this.existingCarsMap.set(car.toyCode, car);
-		}
-		console.log(`----> LOG [Cache] Loaded ${existingCars.length} existing cars`);
+      const children = currentNode.childNodes || [];
+      for (const child of children) {
+        if (this.isElement(child)) {
+          traverse(child);
+        }
+      }
+    };
 
-		// Load all series
-		const existingSeries = await this.seriesRepo.getAll();
-		for (const series of existingSeries) {
-			this.existingSeriesMap.set(series.name, series);
-		}
-		console.log(
-			`----> LOG [Cache] Loaded ${existingSeries.length} existing series`,
-		);
+    traverse(node);
+    return results;
+  }
 
-		// Load all car-series relationships
-		if (this.carSeriesRepo) {
-			const allCarSeries = await this.carSeriesRepo.getAll();
-			for (const rel of allCarSeries) {
-				const cacheKey = `${rel.carId}-${rel.seriesId}`;
-				this.existingCarSeriesMap.set(cacheKey, rel);
-			}
-			console.log(
-				`----> LOG [Cache] Loaded ${allCarSeries.length} existing car-series relationships`,
-			);
-		}
-	}
+  // Find first element by tag name
+  private findElementByTagName(
+    node: Parse5Node,
+    tagName: string
+  ): Parse5Node | null {
+    const children = node.childNodes || [];
+    for (const child of children) {
+      if (this.isElement(child) && child.nodeName === tagName) {
+        return child;
+      }
+    }
+    return null;
+  }
 
-	// Helper method to check if a node is an Element
-	private isElement(node: Parse5Node): boolean {
-		return node.nodeName !== "#text" && node.nodeName !== "#comment";
-	}
+  // Find all elements by tag name
+  private findElementsByTagName(
+    node: Parse5Node,
+    tagName: string
+  ): Parse5Node[] {
+    const results: Parse5Node[] = [];
+    const children = node.childNodes || [];
 
-	// Find elements by class name
-	private findElementsByClass(
-		node: Parse5Node,
-		className: string,
-	): Parse5Node[] {
-		const results: Parse5Node[] = [];
+    for (const child of children) {
+      if (this.isElement(child) && child.nodeName === tagName) {
+        results.push(child);
+      }
+    }
 
-		const traverse = (currentNode: Parse5Node) => {
-			if (this.isElement(currentNode)) {
-				const attrs = currentNode.attrs || [];
-				const classAttr = attrs.find(
-					(attr: { name: string; value: string }) => attr.name === "class",
-				);
-				if (classAttr?.value.split(" ").includes(className)) {
-					results.push(currentNode);
-				}
-			}
+    return results;
+  }
 
-			const children = currentNode.childNodes || [];
-			for (const child of children) {
-				if (this.isElement(child)) {
-					traverse(child);
-				}
-			}
-		};
+  // Get text content from an element
+  private getTextContent(node: Parse5Node): string {
+    let text = "";
+    const traverse = (currentNode: Parse5Node) => {
+      if (currentNode.nodeName === "#text" && currentNode.value) {
+        text += currentNode.value;
+      }
+      const children = currentNode.childNodes || [];
+      for (const child of children) {
+        traverse(child);
+      }
+    };
+    traverse(node);
+    return text;
+  }
 
-		traverse(node);
-		return results;
-	}
+  // Find image links (a.image elements)
+  private findImageLinks(node: Parse5Node): string[] {
+    const links: string[] = [];
 
-	// Find first element by tag name
-	private findElementByTagName(
-		node: Parse5Node,
-		tagName: string,
-	): Parse5Node | null {
-		const children = node.childNodes || [];
-		for (const child of children) {
-			if (this.isElement(child) && child.nodeName === tagName) {
-				return child;
-			}
-		}
-		return null;
-	}
+    const traverse = (currentNode: Parse5Node) => {
+      if (this.isElement(currentNode) && currentNode.nodeName === "a") {
+        const attrs = currentNode.attrs || [];
+        const classAttr = attrs.find(
+          (attr: { name: string; value: string }) => attr.name === "class"
+        );
+        const hrefAttr = attrs.find(
+          (attr: { name: string; value: string }) => attr.name === "href"
+        );
+        if (classAttr?.value.includes("image") && hrefAttr) {
+          // Filter out images containing "Image_Not_Available"
+          if (!hrefAttr.value.includes("Image_Not_Available")) {
+            links.push(hrefAttr.value);
+          }
+        }
+      }
 
-	// Find all elements by tag name
-	private findElementsByTagName(
-		node: Parse5Node,
-		tagName: string,
-	): Parse5Node[] {
-		const results: Parse5Node[] = [];
-		const children = node.childNodes || [];
+      const children = currentNode.childNodes || [];
+      for (const child of children) {
+        if (this.isElement(child)) {
+          traverse(child);
+        }
+      }
+    };
 
-		for (const child of children) {
-			if (this.isElement(child) && child.nodeName === tagName) {
-				results.push(child);
-			}
-		}
+    traverse(node);
+    return links;
+  }
 
-		return results;
-	}
+  // Extract model data from the model cell
+  private extractModel(node: Parse5Node): ModelData {
+    // Try to find an anchor tag first
+    let anchorFound = false;
+    let modelData: ModelData = { name: "", slug: null };
 
-	// Get text content from an element
-	private getTextContent(node: Parse5Node): string {
-		let text = "";
+    const findAnchor = (currentNode: Parse5Node) => {
+      if (
+        this.isElement(currentNode) &&
+        currentNode.nodeName === "a" &&
+        !anchorFound
+      ) {
+        const attrs = currentNode.attrs || [];
+        const hrefAttr = attrs.find(
+          (attr: { name: string; value: string }) => attr.name === "href"
+        );
 
-		const traverse = (currentNode: Parse5Node) => {
-			if (currentNode.nodeName === "#text" && currentNode.value) {
-				text += currentNode.value;
-			}
+        if (hrefAttr?.value.startsWith("/wiki/")) {
+          anchorFound = true;
+          // Extract slug from href
+          const slug = hrefAttr.value.replace(/^\/wiki\//, "");
+          // Get the full text content of the cell (includes anchor text + any additional text)
+          const fullText = this.getTextContent(node).trim();
 
-			const children = currentNode.childNodes || [];
-			for (const child of children) {
-				traverse(child);
-			}
-		};
+          modelData = {
+            name: fullText,
+            slug: decodeURIComponent(slug),
+          };
+          return;
+        }
+      }
 
-		traverse(node);
-		return text;
-	}
+      const children = currentNode.childNodes || [];
+      for (const child of children) {
+        if (this.isElement(child) && !anchorFound) {
+          findAnchor(child);
+        }
+      }
+    };
 
-	// Find image links (a.image elements)
-	private findImageLinks(node: Parse5Node): string[] {
-		const links: string[] = [];
+    findAnchor(node);
 
-		const traverse = (currentNode: Parse5Node) => {
-			if (this.isElement(currentNode) && currentNode.nodeName === "a") {
-				const attrs = currentNode.attrs || [];
-				const classAttr = attrs.find(
-					(attr: { name: string; value: string }) => attr.name === "class",
-				);
-				const hrefAttr = attrs.find(
-					(attr: { name: string; value: string }) => attr.name === "href",
-				);
+    // If no anchor found, just get the text content
+    if (!anchorFound) {
+      modelData = {
+        name: this.getTextContent(node).trim(),
+        slug: null,
+      };
+    }
 
-				if (classAttr?.value.includes("image") && hrefAttr) {
-					links.push(hrefAttr.value);
-				}
-			}
+    return modelData;
+  }
 
-			const children = currentNode.childNodes || [];
-			for (const child of children) {
-				if (this.isElement(child)) {
-					traverse(child);
-				}
-			}
-		};
+  // Extract series from anchor tags in the series cell
+  private extractSeries(node: Parse5Node): SeriesData[] {
+    const series: SeriesData[] = [];
 
-		traverse(node);
-		return links;
-	}
+    const findAnchors = (currentNode: Parse5Node) => {
+      if (this.isElement(currentNode) && currentNode.nodeName === "a") {
+        const attrs = currentNode.attrs || [];
+        const hrefAttr = attrs.find(
+          (attr: { name: string; value: string }) => attr.name === "href"
+        );
+        const textContent = this.getTextContent(currentNode).trim();
 
-	// Upsert series into database
-	private async upsertSeries(
-		name: string,
-		seriesNum: string,
-	): Promise<string | null> {
-		if (!this.seriesRepo) return null;
+        if (textContent && hrefAttr) {
+          // Extract slug from href (e.g., "/wiki/HW_Wagons_Mini_Collection_(2025)" -> "HW_Wagons_Mini_Collection_(2025)")
+          const slug = hrefAttr.value.replace(/^\/wiki\//, "");
 
-		try {
-			// Check cache first
-			const cached = this.existingSeriesMap.get(name);
-			if (cached) {
-				console.log(`----> LOG [Cache] Series ${name} found in cache!`);
-				return cached.id;
-			}
+          // Check if this series already exists in the array
+          const exists = series.some((s) => s.slug === slug);
+          if (!exists) {
+            series.push({
+              name: textContent,
+              slug: decodeURIComponent(slug),
+            });
+          }
+        }
+      }
 
-			const series = await this.seriesRepo.upsert({
-				name,
-				seriesNum,
-			});
+      const children = currentNode.childNodes || [];
+      for (const child of children) {
+        if (this.isElement(child)) {
+          findAnchors(child);
+        }
+      }
+    };
 
-			// Update cache
-			this.existingSeriesMap.set(name, series);
+    findAnchors(node);
+    return series;
+  }
 
-			console.log(`----> LOG [DB=D1] Series ${name} upserted!`);
-			return series.id;
-		} catch (error) {
-			console.error("Error upserting series:", error);
-			throw error;
-		}
-	}
+  async parse(url: string, year: string): Promise<HotWheelData[]> {
+    try {
+      // -- create cache key for the HTML response
+      const htmlCacheKey = `scrape:html:${year}`;
 
-	// Upload photos to R2 and return R2 keys with r2:// prefix
-	private async uploadPhotosToR2(
-		photoUrls: string[],
-		toyCode: string,
-		year: string,
-	): Promise<string[]> {
-		if (!this.bucket || photoUrls.length === 0) return photoUrls;
+      // -- try to get HTML from cache first
+      let html: string | null = null;
+      if (this.cacheService) {
+        html = await this.cacheService.get<string>(htmlCacheKey);
+        if (html) {
+          console.log(
+            `----> LOG [Cache] HTML for year ${year} found in cache!`
+          );
+        }
+      }
 
-		const bucket = this.bucket;
+      // -- if not in cache, fetch from URL
+      if (!html) {
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142s.0.0.0 Safari/536.36",
+          },
+        });
 
-		// Upload all photos in parallel
-		const uploadPromises = photoUrls.map(async (url, i) => {
-			try {
-				// Generate R2 key for this photo
-				const key = generatePhotoKey(toyCode, year, i, url);
+        html = await response.text();
 
-				// Upload to R2
-				const r2Key = await uploadImageToR2(bucket, url, key);
-				console.log(
-					`----> LOG [Storage=R2] Uploaded photo ${i + 1}/${photoUrls.length} for ${toyCode}: ${r2Key}`,
-				);
+        // Cache the HTML response
+        if (this.cacheService) {
+          await this.cacheService.set(htmlCacheKey, html);
+          console.log(`----> LOG [Cache] HTML for year ${year} cached!`);
+        }
+      }
 
-				return r2Key;
-			} catch (error) {
-				console.error(`Failed to upload photo ${i + 1} for ${toyCode}:`, error);
-				// Fall back to original URL if upload fails
-				return url;
-			}
-		});
+      const document = parse(html) as Parse5Node;
+      const results: HotWheelData[] = [];
 
-		return Promise.all(uploadPromises);
-	}
+      // Find all tables with class "wikitable"
+      const tables = this.findElementsByClass(document, "wikitable");
+      if (tables.length === 0) {
+        throw new Error("No tables found");
+      }
+      for (const table of tables) {
+        const tbody = this.findElementByTagName(table, "tbody");
+        if (!tbody) continue;
+        const rows = this.findElementsByTagName(tbody, "tr");
+        const totalRows = rows.length;
+        let index = 0;
+        for (const row of rows) {
+          console.log(
+            `----> Log [Scraper] Processing ${index + 1}/${totalRows}`
+          );
+          index++;
 
-	// Upsert car into database
-	private async upsertCar(
-		data: HotWheelData,
-		seriesIds: string[],
-	): Promise<void> {
-		if (!this.carsRepo || !this.carSeriesRepo) return;
+          const cells = this.findElementsByTagName(row, "td");
+          if (cells.length >= 5) {
+            const toyNum = this.getTextContent(cells[0]).trim();
+            const colNum = this.getTextContent(cells[1]).trim();
+            const model = this.extractModel(cells[2]);
+            const series = this.extractSeries(cells[3]);
+            const seriesNum = this.getTextContent(cells[4]).trim();
+            const photoUrl = this.findImageLinks(row);
+            const hotWheelData: HotWheelData = {
+              toy_num: toyNum,
+              col_num: colNum,
+              model: model,
+              series: series,
+              series_num: seriesNum,
+              photo_url: photoUrl,
+              year: String(year),
+            };
+            results.push(hotWheelData);
+          }
+        }
+      }
+      console.log("----> Log [Scraper] Done!");
+      if (this.cacheService) {
+        // Split results into chunks of 50 items
+        const chunkSize = 20;
+        const chunks: HotWheelData[][] = [];
+        for (let i = 0; i < results.length; i += chunkSize) {
+          chunks.push(results.slice(i, i + chunkSize));
+        }
 
-		try {
-			const toyCode = data.toy_num;
-			const seriesNums = data.series_num.split("/");
+        // Store each chunk with an indexed key
+        for (let i = 0; i < chunks.length; i++) {
+          await this.cacheService.set(`scrape:results:${year}:chunk:${i}`, chunks[i]);
+          console.log(`----> LOG [Cache] Results chunk ${i + 1}/${chunks.length} for year ${year} cached!`);
+        }
 
-			// Upload photos to R2 if bucket is available
-			const photoUrls = this.bucket
-				? await this.uploadPhotosToR2(data.photo_url, toyCode, data.year)
-				: data.photo_url;
-
-			const photoUrl = photoUrls[0];
-
-			// Check cache first
-			let car = this.existingCarsMap.get(toyCode);
-			if (car) {
-				console.log(`----> LOG [Cache] Car ${toyCode} found in cache!`);
-			} else {
-				// Upsert car using repository
-				car = await this.carsRepo.upsert({
-					toyCode,
-					toyIndex: data.col_num,
-					model: data.model,
-					avatarUrl: photoUrl,
-					year: data.year,
-				});
-
-				// Update cache
-				this.existingCarsMap.set(toyCode, car);
-				console.log(`----> LOG [DB] Car ${toyCode} upserted!`);
-			}
-
-			// Upsert car-series relationships for each series
-			for (let i = 0; i < seriesIds.length; i++) {
-				const carSeriesNum = seriesNums[i] || seriesNums[0] || data.series_num;
-				await this.upsertCarSeries(
-					car.id,
-					seriesIds[i],
-					Number.parseInt(carSeriesNum, 10) || 0,
-				);
-			}
-		} catch (error) {
-			console.error("Error upserting car:", error);
-			throw error;
-		}
-	}
-
-	// Upsert car-series relationship
-	private async upsertCarSeries(
-		carId: string,
-		seriesId: string,
-		index: number,
-	): Promise<void> {
-		if (!this.carSeriesRepo) return;
-
-		try {
-			const cacheKey = `${carId}-${seriesId}`;
-
-			// Check cache first
-			const cached = this.existingCarSeriesMap.get(cacheKey);
-			if (cached) {
-				console.log(`----> LOG [Cache] Car-Series relationship found in cache!`);
-				return;
-			}
-
-			const carSeries = await this.carSeriesRepo.upsert({
-				carId,
-				seriesId,
-				index,
-			});
-
-			// Update cache
-			this.existingCarSeriesMap.set(cacheKey, carSeries);
-
-			console.log(`----> LOG [DB] Car-Series relationship created/updated!`);
-		} catch (error) {
-			console.error("Error upserting car-series relationship:", error);
-			throw error;
-		}
-	}
-
-	async parse(url: string, year: string): Promise<void> {
-		try {
-			const response = await fetch(url, {
-				headers: {
-					"User-Agent":
-						"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142s.0.0.0 Safari/536.36",
-				},
-			});
-
-			const html = await response.text();
-			const document = parse(html) as Parse5Node;
-			const results: HotWheelData[] = [];
-
-			// Find all tables with class "wikitable"
-			const tables = this.findElementsByClass(document, "wikitable");
-			if (tables.length === 0) {
-				throw new Error("No tables found");
-			}
-			for (const table of tables) {
-				const tbody = this.findElementByTagName(table, "tbody");
-				if (!tbody) continue;
-				const rows = this.findElementsByTagName(tbody, "tr");
-				const totalRows = rows.length;
-				let index = 0;
-				for (const row of rows) {
-					console.log(
-						`----> Log [Scraper] Processing ${index + 1}/${totalRows}`,
-					);
-					index++;
-
-					const cells = this.findElementsByTagName(row, "td");
-					if (cells.length >= 5) {
-						const toyNum = this.getTextContent(cells[0]).trim();
-						const colNum = this.getTextContent(cells[1]).trim();
-						const model = this.getTextContent(cells[2]).trim();
-						const series = this.getTextContent(cells[3])
-							.trim()
-							.split("\n")
-							.filter((s) => s.trim());
-						const seriesNum = this.getTextContent(cells[4]).trim();
-						const photoUrl = this.findImageLinks(row);
-
-						const hotWheelData: HotWheelData = {
-							toy_num: toyNum,
-							col_num: colNum,
-							model: model,
-							series: series,
-							series_num: seriesNum,
-							photo_url: photoUrl,
-							year: String(year),
-						};
-
-						results.push(hotWheelData);
-
-						// Upsert to database if db is available
-						if (this.db && series && series.length > 0) {
-							const seriesNums = seriesNum.split("/");
-							const seriesIds: string[] = [];
-
-							// Upsert each series and collect their IDs
-							for (let i = 0; i < series.length; i++) {
-								const seriesName = series[i];
-								const seriesSeriesNum =
-									seriesNums[i] ||
-									seriesNums[seriesNums.length - 1] ||
-									seriesNum;
-								const seriesId = await this.upsertSeries(
-									seriesName,
-									seriesSeriesNum,
-								);
-								if (seriesId) {
-									seriesIds.push(seriesId);
-								}
-							}
-
-							// Upsert car with all series IDs
-							if (seriesIds.length > 0) {
-								await this.upsertCar(hotWheelData, seriesIds);
-							}
-						}
-					}
-				}
-			}
-		} catch (error) {
-			console.error("Error scraping:", error);
-			throw error;
-		}
-	}
+        // Store metadata about the chunks
+        await this.cacheService.set(`scrape:results:${year}:meta`, {
+          totalChunks: chunks.length,
+          totalItems: results.length,
+          chunkSize,
+        });
+        console.log(`----> LOG [Cache] Total ${chunks.length} chunks for year ${year} cached!`);
+      }
+      return results;
+    } catch (error) {
+      console.error("Error scraping:", error);
+      throw error;
+    }
+  }
 }
 
 export { ScrapeTableSpider };
