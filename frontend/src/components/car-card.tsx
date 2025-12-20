@@ -1,8 +1,13 @@
 "use client";
 
+import { Folder01Icon, ImageDownload02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { Car } from "@/types/car";
 
 interface CarCardProps {
@@ -10,18 +15,33 @@ interface CarCardProps {
 }
 
 export function CarCard({ car }: CarCardProps) {
+	const [isImageError, setIsImageError] = useState(false);
 	return (
 		<Card
 			className={`group overflow-hidden transition-all duration-300 hover:scale-[1.02] p-0`}
 		>
 			<div className="relative aspect-[16/9] overflow-hidden">
-				<Image
-					src={car.avatarUrl || "/placeholder.svg"}
-					alt={car.model}
-					fill
-					loading="eager"
-					className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-105`}
-				/>
+				{car.avatarUrl && !isImageError ? (
+					<Image
+						src={car.avatarUrl || "/placeholder.svg"}
+						alt={car.model}
+						fill
+						loading="eager"
+						onError={() => setIsImageError(true)}
+						className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-105`}
+					/>
+				) : (
+					<div className="bg-muted text-xs w-full h-full flex items-center flex-col gap-2 justify-center">
+						<HugeiconsIcon
+							className="size-8 text-muted-foreground"
+							strokeWidth={1}
+							icon={ImageDownload02Icon}
+						/>
+						<span className="text-muted-foreground">
+							We are working on it...
+						</span>
+					</div>
+				)}
 				{/* Year Badge */}
 				<div className="absolute top-3 left-3">
 					<Badge
@@ -51,14 +71,20 @@ export function CarCard({ car }: CarCardProps) {
 							#{car.toyCode}
 						</span>
 					</div>
-					<div className="flex items-center gap-2 justify-between">
+					<div className="flex items-center mt-2 flex-wrap gap-2 justify-between">
 						{car.series?.map((s) => (
-							<span
-								className="text-xs px-1.5 py-0.5 text-muted-foreground"
-								key={s.id}
-							>
-								{s.name}
-							</span>
+							<Link href={`/collections/${s.id}`} key={s.id}>
+								<span
+									className={cn(
+										"dark:bg-orange-900/50 dark:hover:bg-orange-900 dark:text-orange-50",
+										"bg-orange-100 hover:bg-orange-200 text-orange-800",
+										"flex text-xs gap-2 items-center px-1.5 hover:underline cursor-pointer hover:scale-105 transition hover:transition py-0.5",
+									)}
+								>
+									<HugeiconsIcon icon={Folder01Icon} className="size-3" />
+									{s.name}
+								</span>
+							</Link>
 						))}
 					</div>
 				</div>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Mono } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import type React from "react";
 import "./globals.css";
@@ -12,8 +12,9 @@ import { ThemeToggle } from "@/components/theme-toggler";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-const jetbrainsMono = JetBrains_Mono({
-	subsets: ["latin"],
+const jetbrainsMono = IBM_Plex_Mono({
+	subsets: ["vietnamese", "latin"],
+	weight: ["400", "500", "600", "700"],
 	variable: "--font-sans",
 });
 

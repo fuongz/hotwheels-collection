@@ -42,6 +42,7 @@ interface CollectionFiltersProps {
 	onSortOrderChange: (value: string | null) => void;
 	onSearchChange: (value: string | null) => void;
 	onGridColumnsChange: (value: number) => void;
+	hideYearFilter?: boolean;
 }
 
 export function CollectionFilters({
@@ -56,6 +57,7 @@ export function CollectionFilters({
 	onSortOrderChange,
 	onSearchChange,
 	onGridColumnsChange,
+	hideYearFilter = false,
 }: CollectionFiltersProps) {
 	// Local state for immediate input updates
 	const [searchInput, setSearchInput] = useState(search || "");
@@ -64,62 +66,55 @@ export function CollectionFilters({
 	useEffect(() => {
 		setSearchInput(search || "");
 	}, [search]);
-
 	const years = Array.from({ length: 12 }, (_, i) => (2015 + i).toString());
 
 	return (
 		<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4 bg-card/90 backdrop-blur-sm">
 			<div className="flex items-center gap-3 sm:gap-4">
 				{/* Year Filter */}
-				<div className="flex items-center gap-2">
-					<label
-						htmlFor="year-select"
-						className="hidden sm:inline-block text-sm text-muted-foreground whitespace-nowrap"
-					>
-						Year:
-					</label>
-					<Select
-						value={year || "all"}
-						onValueChange={(value) =>
-							onYearChange(value === "all" ? null : value)
-						}
-					>
-						<SelectTrigger id="year-select" className="w-full sm:w-[140px]">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All years</SelectItem>
-							{years.map((y) => (
-								<SelectItem key={y} value={y}>
-									{y}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
+				{!hideYearFilter && (
+					<div className="flex items-center gap-2">
+						<label
+							htmlFor="year-select"
+							className="hidden sm:inline-block text-sm text-muted-foreground whitespace-nowrap"
+						>
+							Filter:
+						</label>
+						<Select
+							value={year || "all"}
+							onValueChange={(value) =>
+								onYearChange(value === "all" ? null : value)
+							}
+						>
+							<SelectTrigger id="year-select" className="w-full sm:w-[140px]">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">All years</SelectItem>
+								{years.map((y) => (
+									<SelectItem key={y} value={y}>
+										{y}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+				)}
 
 				{/* Sort By */}
 				<div className="flex items-center gap-2">
-					<label
-						htmlFor="sort-by-select"
-						className="hidden sm:inline-block text-sm text-muted-foreground whitespace-nowrap"
-					>
-						Sort by:
-					</label>
 					<Select
-						value={sortBy || "default"}
+						value={sortBy || "year"}
 						onValueChange={(value) =>
-							onSortByChange(value === "default" ? null : value)
+							onSortByChange(value === "year" ? null : value)
 						}
 					>
 						<SelectTrigger id="sort-by-select" className="w-full sm:w-[140px]">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="default">Default</SelectItem>
 							<SelectItem value="name">Name</SelectItem>
 							<SelectItem value="year">Year</SelectItem>
-							<SelectItem value="series">Series</SelectItem>
 							<SelectItem value="createdAt">Date Added</SelectItem>
 						</SelectContent>
 					</Select>
@@ -127,16 +122,10 @@ export function CollectionFilters({
 
 				{/* Sort Order */}
 				<div className="flex items-center gap-2">
-					<label
-						htmlFor="sort-order-select"
-						className="hidden sm:inline-block text-sm text-muted-foreground whitespace-nowrap"
-					>
-						Order:
-					</label>
 					<Select
-						value={sortOrder || "asc"}
+						value={sortOrder || "desc"}
 						onValueChange={(value) =>
-							onSortOrderChange(value === "asc" ? null : value)
+							onSortOrderChange(value === "desc" ? null : value)
 						}
 					>
 						<SelectTrigger
@@ -189,14 +178,14 @@ export function CollectionFilters({
 									4 columns
 								</span>
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => onGridColumnsChange(5)}>
-								<span className={gridColumns === 5 ? "font-semibold" : ""}>
-									5 columns
-								</span>
-							</DropdownMenuItem>
 							<DropdownMenuItem onClick={() => onGridColumnsChange(6)}>
 								<span className={gridColumns === 6 ? "font-semibold" : ""}>
 									6 columns
+								</span>
+							</DropdownMenuItem>
+							<DropdownMenuItem onClick={() => onGridColumnsChange(6)}>
+								<span className={gridColumns === 8 ? "font-semibold" : ""}>
+									8 columns
 								</span>
 							</DropdownMenuItem>
 						</DropdownMenuContent>

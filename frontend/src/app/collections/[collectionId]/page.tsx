@@ -1,11 +1,18 @@
 "use client";
 
-import { CryingIcon, Fire02Icon } from "@hugeicons/core-free-icons";
+import {
+	ArrowLeft01Icon,
+	CryingIcon,
+	Fire02Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
-import { Suspense, useMemo } from "react";
+import { useMemo } from "react";
 import { CarCard } from "@/components/car-card";
 import { CollectionFilters } from "@/components/collection-filters";
+import { Button } from "@/components/ui/button";
 import {
 	Pagination,
 	PaginationContent,
@@ -16,15 +23,18 @@ import {
 	PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
-import { useCars } from "@/hooks/use-cars";
+import { useSeries } from "@/hooks/use-series";
 import type { Car } from "@/types/car";
 
-function CollectionPageContent() {
+interface CollectionPageContentProps {
+	collectionId: string;
+}
+
+function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 	const [currentPage, setCurrentPage] = useQueryState(
 		"page",
 		parseAsInteger.withDefault(1),
 	);
-	const [year, setYear] = useQueryState("year", parseAsString);
 	const [sortBy, setSortBy] = useQueryState(
 		"sortBy",
 		parseAsString.withDefault("year"),
@@ -39,12 +49,19 @@ function CollectionPageContent() {
 		parseAsInteger.withDefault(6),
 	);
 	const limit = 24;
+
 	const {
 		cars: apiCars,
 		meta,
 		isLoading,
 		isError,
-	} = useCars({ page: currentPage, limit, year, sortBy, sortOrder, q });
+	} = useSeries(collectionId, {
+		page: currentPage,
+		limit,
+		sortBy,
+		sortOrder,
+		q,
+	});
 
 	// Transform API data to match the component's expected Car interface
 	const carsData: Car[] = useMemo(() => {
@@ -58,24 +75,55 @@ function CollectionPageContent() {
 		}));
 	}, [apiCars]);
 
+	// Get series name from the first car's series data
+	const seriesName = useMemo(() => {
+		if (carsData.length > 0 && carsData[0].series?.length > 0) {
+			const series = carsData[0].series.find((s) => s.id === collectionId);
+			return series?.name;
+		}
+		return null;
+	}, [carsData, collectionId]);
+
 	// Calculate total pages
 	const totalPages = meta ? Math.ceil(meta.total / meta.limit) : 1;
 
 	return (
-		<div className="container mx-auto px-4 pb-6">
+		<div className="container mx-auto px-4 pt-6 pb-6">
+			{/* Back Button and Title */}
+			<div className="mb-6">
+				<Link href="/">
+					<Button variant="secondary" size="sm" className="cursor-pointer mb-4">
+						<HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 mr-2" />
+						Back to Collections
+					</Button>
+				</Link>
+				{seriesName && (
+					<div>
+						<h1 className="text-xl font-bold text-foreground mb-2">
+							{seriesName}
+						</h1>
+						{meta && (
+							<p className="text-sm text-muted-foreground">
+								<span className="font-semibold text-foreground">
+									{meta.total} {meta.total === 1 ? "car" : "cars"}
+								</span>{" "}
+								in this collection
+							</p>
+						)}
+					</div>
+				)}
+			</div>
+
 			{/* Filters Section */}
 			<section className="sticky top-10 z-1">
 				<CollectionFilters
-					year={year}
+					year={null}
 					sortBy={sortBy}
 					sortOrder={sortOrder}
 					search={q}
 					searchLoading={isLoading}
 					gridColumns={gridColumns}
-					onYearChange={(value) => {
-						setYear(value);
-						setCurrentPage(1);
-					}}
+					onYearChange={() => {}}
 					onSortByChange={(value) => {
 						setSortBy(value);
 						setCurrentPage(1);
@@ -91,11 +139,12 @@ function CollectionPageContent() {
 					onGridColumnsChange={(value) => {
 						setGridColumns(value);
 					}}
+					hideYearFilter
 				/>
 			</section>
 
 			{/* Main Content */}
-			<main className="space-y-8">
+			<main className="space-y-8 mx-[1px]">
 				{/* Loading State */}
 				{isLoading && (
 					<div className="text-center py-16">
@@ -104,7 +153,7 @@ function CollectionPageContent() {
 							Loading cars...
 						</h3>
 						<p className="text-muted-foreground">
-							Please wait while we fetch your collection
+							Please wait while we fetch the collection
 						</p>
 					</div>
 				)}
@@ -119,10 +168,10 @@ function CollectionPageContent() {
 							/>
 						</div>
 						<h3 className="text-lg font-medium text-foreground mb-2">
-							Failed to load cars
+							Failed to load collection
 						</h3>
 						<p className="text-muted-foreground">
-							There was an error fetching your collection. Please try again
+							There was an error fetching this collection. Please try again
 							later.
 						</p>
 					</div>
@@ -141,9 +190,9 @@ function CollectionPageContent() {
 							No cars found
 						</h3>
 						<p className="text-muted-foreground">
-							{q || year
-								? "Try adjusting your filters to see more results."
-								: "Your collection is empty. Start adding some cars!"}
+							{q
+								? "Try adjusting your search to see more results."
+								: "This collection is empty."}
 						</p>
 					</div>
 				)}
@@ -272,21 +321,18 @@ function CollectionPageContent() {
 	);
 }
 
-export default function CollectionPage() {
-	return (
-		<Suspense
-			fallback={
-				<div className="container mx-auto px-4 pb-6">
-					<div className="text-center py-16">
-						<Spinner size="xl" />
-						<h3 className="text-lg mt-2 font-medium text-foreground mb-2">
-							Loading...
-						</h3>
-					</div>
-				</div>
-			}
-		>
-			<CollectionPageContent />
-		</Suspense>
+export default function CarCollectionPage() {
+	const { collectionId } = useParams<{ collectionId: string }>();
+	return !collectionId ? (
+		<div className="container mx-auto px-4 pb-6">
+			<div className="text-center py-16">
+				<Spinner size="xl" />
+				<h3 className="text-lg mt-2 font-medium text-foreground mb-2">
+					Loading collection...
+				</h3>
+			</div>
+		</div>
+	) : (
+		<CollectionPageContent collectionId={collectionId} />
 	);
 }
