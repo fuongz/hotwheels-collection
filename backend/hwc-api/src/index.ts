@@ -6,11 +6,12 @@ import { ScrapeTableSpider } from "../scripts/scrape";
 import { UpsertCars } from "../scripts/upsert";
 import { auth } from "./auth";
 import { CarsRepository } from "./db/d1/repositories/cars_repository";
-import { authMiddleware } from "./middlewares/auth-middleware";
+import { adminMiddleware } from "./middlewares/admin-middleware";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
 app.use(
+	"/v1/*",
 	cors({
 		origin: ["http://localhost:3001", "https://hotwheels.phake.app"],
 		allowMethods: ["GET"],
@@ -18,11 +19,23 @@ app.use(
 	}),
 );
 
+app.use(
+	"/api/auth/*",
+	cors({
+		origin: ["http://localhost:3001", "https://hotwheels.phake.app"],
+		allowHeaders: ["Content-Type", "Authorization"],
+		allowMethods: ["POST", "GET", "OPTIONS"],
+		exposeHeaders: ["Content-Length"],
+		maxAge: 600,
+		credentials: true,
+	}),
+);
+
 app.on(["POST", "GET"], "/api/auth/*", (c) => {
 	return auth(c.env).handler(c.req.raw);
 });
 
-app.get("/sync/:year", authMiddleware, async ({ json, env, req }) => {
+app.get("/sync/:year", adminMiddleware, async ({ json, env, req }) => {
 	try {
 		const { year } = req.param();
 		const spider = new ScrapeTableSpider(env);
@@ -34,7 +47,7 @@ app.get("/sync/:year", authMiddleware, async ({ json, env, req }) => {
 	}
 });
 
-app.get("/upsert/:year", authMiddleware, async ({ json, env, req }) => {
+app.get("/upsert/:year", adminMiddleware, async ({ json, env, req }) => {
 	try {
 		const { year } = req.param();
 		const spider = new UpsertCars(env);
