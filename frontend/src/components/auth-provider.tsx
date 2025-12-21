@@ -1,16 +1,14 @@
 "use client";
 
-import { Separator } from "@base-ui/react";
 import { FavouriteIcon, GithubFreeIcons } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { SignInDialog } from "./auth/sign-in-dialog";
-import { SignUpDialog } from "./auth/sign-up-dialog";
 import { UserOptions } from "./auth/user-options";
 import { ThemeToggle } from "./theme-toggler";
-import { Button } from "./ui/button";
+import { Button, Separator, Spinner } from "./ui";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const { data: session, isPending } = useSession();
@@ -33,15 +31,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 							</div>
 						</Link>
 						<div className="flex items-center gap-2">
-							{!isPending &&
-								(session?.session ? (
+							{!isPending ? (
+								session?.session ? (
 									<UserOptions />
 								) : (
-									<>
-										<SignUpDialog />
-										<SignInDialog />
-									</>
-								))}
+									<SignInDialog />
+								)
+							) : (
+								<Spinner size="sm" />
+							)}
 							<Separator orientation="vertical" />
 							<ThemeToggle />
 							<Separator orientation="vertical" />
@@ -57,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 								}
 							>
 								<HugeiconsIcon icon={GithubFreeIcons} />
-								<span>ithub</span>
+								<span>github</span>
 							</Button>
 						</div>
 					</div>

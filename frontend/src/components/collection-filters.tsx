@@ -182,11 +182,6 @@ export function CollectionFilters({
 									6 columns
 								</span>
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => onGridColumnsChange(8)}>
-								<span className={gridColumns === 8 ? "font-semibold" : ""}>
-									8 columns
-								</span>
-							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</TooltipProvider>
