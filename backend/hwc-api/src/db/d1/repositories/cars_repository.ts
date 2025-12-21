@@ -290,7 +290,7 @@ FROM ${cars} c`;
 			data: carsWithSeries,
 			meta: { page, limit, total },
 		};
-		await this.cache.set(cacheKey, response, 300);
+		await this.cache.set(cacheKey, response, 86_400);
 		return response;
 	}
 }
