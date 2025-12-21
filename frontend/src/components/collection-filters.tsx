@@ -2,7 +2,8 @@
 
 import {
 	CleanIcon,
-	InsertColumnLeftIcon,
+	FilterVerticalIcon,
+	Layout01Icon,
 	Search01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -78,7 +79,7 @@ export function CollectionFilters({
 							htmlFor="year-select"
 							className="hidden sm:inline-block text-sm text-muted-foreground whitespace-nowrap"
 						>
-							Filter:
+							<HugeiconsIcon icon={FilterVerticalIcon} className="size-6" />
 						</label>
 						<Select
 							value={year || "all"}
@@ -152,16 +153,14 @@ export function CollectionFilters({
 								render={
 									<DropdownMenuTrigger
 										render={
-											<Button
-												variant="outline"
-												size="icon"
-												className="cursor-pointer"
-											/>
+											<Button variant="outline" className="cursor-pointer" />
 										}
 									/>
 								}
 							>
-								<HugeiconsIcon icon={InsertColumnLeftIcon} />
+								<HugeiconsIcon icon={Layout01Icon} />
+								{gridColumns} columns
+								<span className="sr-only">Change layout</span>
 							</TooltipTrigger>
 							<TooltipContent>
 								<p>Change layout</p>
@@ -183,7 +182,7 @@ export function CollectionFilters({
 									6 columns
 								</span>
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => onGridColumnsChange(6)}>
+							<DropdownMenuItem onClick={() => onGridColumnsChange(8)}>
 								<span className={gridColumns === 8 ? "font-semibold" : ""}>
 									8 columns
 								</span>

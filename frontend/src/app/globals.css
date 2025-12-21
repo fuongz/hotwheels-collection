@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -46,7 +47,7 @@
   --muted-foreground: oklch(0.68 0.015 265.75);
   --accent: oklch(0.31 0.012 265.75);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.42 0.153 29.23);
+  --destructive: oklch(57.7% 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.31 0.012 265.75);
   --input: oklch(0.31 0.012 265.75);
@@ -104,4 +105,11 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
 }

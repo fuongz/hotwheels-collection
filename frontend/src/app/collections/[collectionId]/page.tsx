@@ -203,7 +203,7 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 						{/* Results Info */}
 						<div className="flex items-center justify-between">
 							<p className="text-sm text-muted-foreground">
-								Showing{" "}
+								showing{" "}
 								<span className="font-medium text-foreground">
 									{carsData.length}
 								</span>{" "}
@@ -221,9 +221,9 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 									? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
 									: gridColumns === 4
 										? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-										: gridColumns === 5
-											? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-											: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+										: gridColumns === 8
+											? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8"
+											: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6"
 							}`}
 						>
 							{carsData.map((car) => (
