@@ -57,6 +57,13 @@
       "when": 1766200625546,
       "tag": "0007_even_texas_twister",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1766404146063,
+      "tag": "0008_green_madame_masque",
+      "breakpoints": true
     }
   ]
 }

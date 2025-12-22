@@ -1,0 +1,57 @@
+import { and, eq } from "drizzle-orm";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+import { dbClient } from "..";
+import { type NewUserCar, type UserCar, userCars } from "../schema";
+
+export class UserCarsRepository {
+	private db: DrizzleD1Database;
+
+	constructor(env: CloudflareBindings) {
+		this.db = dbClient(env.DB);
+	}
+
+	async findByUserIdAndCarId(
+		userId: string,
+		carId: string,
+	): Promise<UserCar | undefined> {
+		return await this.db
+			.select()
+			.from(userCars)
+			.where(and(eq(userCars.userId, userId), eq(userCars.carId, carId)))
+			.get();
+	}
+
+	async upsert(
+		data: Omit<NewUserCar, "id" | "createdAt" | "updatedAt">,
+	): Promise<UserCar> {
+		const existing = await this.findByUserIdAndCarId(data.userId, data.carId);
+		if (existing) {
+			const [updated] = await this.db
+				.update(userCars)
+				.set({
+					quantity: data.quantity,
+					notes: data.notes,
+					updatedAt: new Date(),
+				})
+				.where(eq(userCars.id, existing.id))
+				.returning();
+			return updated;
+		}
+		const [created] = await this.db.insert(userCars).values(data).returning();
+		return created;
+	}
+
+	async delete(userId: string, carId: string): Promise<void> {
+		await this.db
+			.delete(userCars)
+			.where(and(eq(userCars.userId, userId), eq(userCars.carId, carId)));
+	}
+
+	async findByUserId(userId: string): Promise<UserCar[]> {
+		return await this.db
+			.select()
+			.from(userCars)
+			.where(eq(userCars.userId, userId))
+			.all();
+	}
+}

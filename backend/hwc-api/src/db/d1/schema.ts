@@ -80,6 +80,32 @@ export const carSeries = sqliteTable(
 	}),
 );
 
+export const userCars = sqliteTable(
+	"user_cars",
+	{
+		id: text("id")
+			.primaryKey()
+			.$defaultFn(() => `user_car_${nanoid()}`),
+		userId: text("user_id").notNull(),
+		carId: text("car_id")
+			.notNull()
+			.references(() => cars.id, { onDelete: "cascade" }),
+		quantity: integer("quantity").notNull().default(1),
+		notes: text("notes"),
+		createdAt: integer("created_at", { mode: "timestamp" })
+			.$defaultFn(() => new Date())
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp" })
+			.$defaultFn(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		userIdIdx: index("user_cars_user_id_idx").on(table.userId),
+		carIdIdx: index("user_cars_car_id_idx").on(table.carId),
+		userCarIdx: index("user_cars_user_car_idx").on(table.userId, table.carId),
+	}),
+);
+
 // -- relations
 export const seriesRelations = relations(series, ({ many }) => ({
 	cars: many(cars),
@@ -98,6 +124,14 @@ export const carSeriesRelations = relations(carSeries, ({ one }) => ({
 
 export const carRelations = relations(cars, ({ many }) => ({
 	series: many(carSeries),
+	userCars: many(userCars),
+}));
+
+export const userCarsRelations = relations(userCars, ({ one }) => ({
+	car: one(cars, {
+		fields: [userCars.carId],
+		references: [cars.id],
+	}),
 }));
 
 export type Series = typeof series.$inferSelect;
@@ -108,3 +142,6 @@ export type NewCar = typeof cars.$inferInsert;
 
 export type CarSeries = typeof carSeries.$inferSelect;
 export type NewCarSeries = typeof carSeries.$inferInsert;
+
+export type UserCar = typeof userCars.$inferSelect;
+export type NewUserCar = typeof userCars.$inferInsert;
