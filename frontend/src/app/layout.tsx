@@ -5,6 +5,7 @@ import type React from "react";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const jetbrainsMono = Space_Grotesk({
 	subsets: ["vietnamese", "latin"],
@@ -36,6 +37,7 @@ export default function RootLayout({
 					<NuqsAdapter>
 						<AuthProvider>{children}</AuthProvider>
 					</NuqsAdapter>
+					<Toaster />
 				</ThemeProvider>
 			</body>
 		</html>

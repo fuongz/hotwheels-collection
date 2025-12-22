@@ -23,7 +23,7 @@ import {
 	PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
-import { useSeries } from "@/hooks/use-series";
+import { useApi } from "@/hooks/use-api";
 import type { Car } from "@/types/car";
 
 interface CollectionPageContentProps {
@@ -51,17 +51,23 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 	const limit = 24;
 
 	const {
-		cars: apiCars,
-		meta,
+		data: response,
+		error,
 		isLoading,
-		isError,
-	} = useSeries(collectionId, {
-		page: currentPage,
-		limit,
-		sortBy,
-		sortOrder,
-		q,
-	});
+	} = useApi<Car[]>([
+		`/series/${collectionId}`,
+		{
+			page: currentPage,
+			limit,
+			sortBy,
+			sortOrder,
+			q,
+		},
+	]);
+
+	const apiCars = response?.data;
+	const meta = response?.meta;
+	const isError = error;
 
 	// Transform API data to match the component's expected Car interface
 	const carsData: Car[] = useMemo(() => {

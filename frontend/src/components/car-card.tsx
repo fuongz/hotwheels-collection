@@ -1,12 +1,20 @@
 "use client";
 
-import { Folder01Icon, ImageDownload02Icon } from "@hugeicons/core-free-icons";
+import {
+	BookmarkAdd01Icon,
+	Folder01Icon,
+	ImageDownload02Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { api } from "@/lib/api-client";
+import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import type { Car } from "@/types/car";
 
@@ -16,10 +24,31 @@ interface CarCardProps {
 
 export function CarCard({ car }: CarCardProps) {
 	const [isImageError, setIsImageError] = useState(false);
+	const [isSaving, setIsSaving] = useState(false);
+	const { data: session } = useSession();
+
+	const handleSave = async () => {
+		if (!session?.user) {
+			// Could show a toast or redirect to login
+			alert("Please log in to save cars");
+			return;
+		}
+		setIsSaving(true);
+		toast.promise(api.post(`/cars/${car.id}/save`), {
+			loading: "Saving...",
+			success: () => {
+				setIsSaving(false);
+				return "Car saved";
+			},
+			error: () => {
+				setIsSaving(false);
+				return "Failed to save car";
+			},
+		});
+	};
+
 	return (
-		<Card
-			className={`group overflow-hidden transition-all duration-300 hover:scale-[1.02] p-0`}
-		>
+		<Card className={`group overflow-hidden transition-all p-0`}>
 			<div className="relative aspect-[16/9] overflow-hidden">
 				{car.avatarUrl && !isImageError ? (
 					<Image
@@ -28,7 +57,7 @@ export function CarCard({ car }: CarCardProps) {
 						fill
 						loading="eager"
 						onError={() => setIsImageError(true)}
-						className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-105`}
+						className={`h-full w-full object-cover hover:scale-105 duration-300 transition-all`}
 					/>
 				) : (
 					<div className="bg-muted text-xs w-full h-full flex items-center flex-col gap-2 justify-center">
@@ -52,7 +81,7 @@ export function CarCard({ car }: CarCardProps) {
 					</Badge>
 				</div>
 
-				<div className="absolute top-3 right-3">
+				<div className="absolute top-3 right-3 flex items-center gap-2">
 					<Badge
 						variant="outline"
 						className="bg-background/80 backdrop-blur-sm border-border/50 text-foreground"
@@ -61,7 +90,7 @@ export function CarCard({ car }: CarCardProps) {
 					</Badge>
 				</div>
 			</div>
-			<CardContent className="px-4 pb-4">
+			<CardContent className="px-4 relative">
 				<div className="space-y-2">
 					<h3 className="font-semibold text-sm text-foreground line-clamp-2 leading-relaxed">
 						{car.model}
@@ -89,6 +118,25 @@ export function CarCard({ car }: CarCardProps) {
 					</div>
 				</div>
 			</CardContent>
+
+			<CardFooter className="py-2">
+				{/* Save Button - Only show if user is logged in */}
+				{session?.user && (
+					<Button
+						size="xs"
+						variant="secondary"
+						onClick={handleSave}
+						disabled={isSaving}
+					>
+						<HugeiconsIcon
+							icon={BookmarkAdd01Icon}
+							className="size-4"
+							strokeWidth={2}
+						/>
+						Save to collection
+					</Button>
+				)}
+			</CardFooter>
 		</Card>
 	);
 }

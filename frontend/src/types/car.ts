@@ -18,12 +18,3 @@ export interface Car {
 	createdAt: string;
 	updatedAt: string;
 }
-
-export interface CarsResponse {
-	data: Car[];
-	meta: {
-		page: number;
-		limit: number;
-		total: number;
-	};
-}

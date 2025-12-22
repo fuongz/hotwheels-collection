@@ -16,7 +16,7 @@ import {
 	PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
-import { useCars } from "@/hooks/use-cars";
+import { useApi } from "@/hooks/use-api";
 import type { Car } from "@/types/car";
 
 function CollectionPageContent() {
@@ -39,12 +39,25 @@ function CollectionPageContent() {
 		parseAsInteger.withDefault(6),
 	);
 	const limit = 24;
+
 	const {
-		cars: apiCars,
-		meta,
+		data: response,
+		error,
 		isLoading,
-		isError,
-	} = useCars({ page: currentPage, limit, year, sortBy, sortOrder, q });
+	} = useApi<Car[]>([
+		"/cars",
+		{
+			page: currentPage,
+			limit,
+			year,
+			sortBy,
+			sortOrder,
+			q,
+		},
+	]);
+	const apiCars = response?.data;
+	const meta = response?.meta;
+	const isError = error;
 
 	// Transform API data to match the component's expected Car interface
 	const carsData: Car[] = useMemo(() => {
