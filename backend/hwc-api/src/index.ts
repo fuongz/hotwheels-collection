@@ -99,7 +99,7 @@ app.get(
 						year,
 						q,
 					},
-					user.id,
+					user ? user.id : undefined,
 				),
 			);
 		} catch (err: any) {
@@ -140,7 +140,7 @@ app.get(
 						year,
 						q,
 					},
-					user.id,
+					user ? user.id : undefined,
 				),
 			);
 		} catch (err: any) {
