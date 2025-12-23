@@ -91,7 +91,7 @@ export function CarCard({ car }: CarCardProps) {
 					</Badge>
 				</div>
 			</div>
-			<CardContent className="px-4 relative">
+			<CardContent className={cn("px-4 relative", !session?.user && "pb-4")}>
 				<div className="space-y-2">
 					<h3 className="font-semibold text-sm text-foreground line-clamp-2 leading-relaxed">
 						{car.model}
@@ -120,34 +120,35 @@ export function CarCard({ car }: CarCardProps) {
 				</div>
 			</CardContent>
 
-			<CardFooter className="py-2">
-				{/* Save Button - Only show if user is logged in */}
-				{session?.user &&
+			{session?.user && (
+				<CardFooter className="py-2">
+					{/* Save Button - Only show if user is logged in */}
 					(!car.bookmark ? (
-						<Button
-							size="xs"
-							variant="secondary"
-							onClick={handleSave}
-							disabled={isSaving}
-						>
-							<HugeiconsIcon
-								icon={BookmarkAdd01Icon}
-								className="size-4"
-								strokeWidth={2}
-							/>
-							Save to collection
-						</Button>
+					<Button
+						size="xs"
+						variant="secondary"
+						onClick={handleSave}
+						disabled={isSaving}
+					>
+						<HugeiconsIcon
+							icon={BookmarkAdd01Icon}
+							className="size-4"
+							strokeWidth={2}
+						/>
+						Save to collection
+					</Button>
 					) : (
-						<Badge variant="destructive">
-							<HugeiconsIcon
-								icon={BookmarkCheck02Icon}
-								className="size-4"
-								strokeWidth={2}
-							/>
-							Owned
-						</Badge>
-					))}
-			</CardFooter>
+					<Badge variant="destructive">
+						<HugeiconsIcon
+							icon={BookmarkCheck02Icon}
+							className="size-4"
+							strokeWidth={2}
+						/>
+						Owned
+					</Badge>
+					))
+				</CardFooter>
+			)}
 		</Card>
 	);
 }
