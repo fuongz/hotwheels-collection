@@ -2,6 +2,7 @@
 
 import {
 	BookmarkAdd01Icon,
+	BookmarkCheck02Icon,
 	Folder01Icon,
 	ImageDownload02Icon,
 } from "@hugeicons/core-free-icons";
@@ -100,7 +101,7 @@ export function CarCard({ car }: CarCardProps) {
 							#{car.toyCode}
 						</span>
 					</div>
-					<div className="flex items-center mt-2 flex-wrap gap-2 justify-between">
+					<div className="flex items-center mt-2 flex-wrap gap-2">
 						{car.series?.map((s) => (
 							<Link href={`/collections/${s.id}`} key={s.id}>
 								<span
@@ -121,21 +122,31 @@ export function CarCard({ car }: CarCardProps) {
 
 			<CardFooter className="py-2">
 				{/* Save Button - Only show if user is logged in */}
-				{session?.user && (
-					<Button
-						size="xs"
-						variant="secondary"
-						onClick={handleSave}
-						disabled={isSaving}
-					>
-						<HugeiconsIcon
-							icon={BookmarkAdd01Icon}
-							className="size-4"
-							strokeWidth={2}
-						/>
-						Save to collection
-					</Button>
-				)}
+				{session?.user &&
+					(!car.bookmark ? (
+						<Button
+							size="xs"
+							variant="secondary"
+							onClick={handleSave}
+							disabled={isSaving}
+						>
+							<HugeiconsIcon
+								icon={BookmarkAdd01Icon}
+								className="size-4"
+								strokeWidth={2}
+							/>
+							Save to collection
+						</Button>
+					) : (
+						<Badge variant="destructive">
+							<HugeiconsIcon
+								icon={BookmarkCheck02Icon}
+								className="size-4"
+								strokeWidth={2}
+							/>
+							Owned
+						</Badge>
+					))}
 			</CardFooter>
 		</Card>
 	);

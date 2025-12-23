@@ -7,7 +7,17 @@ export interface Series {
 	updatedAt: string;
 }
 
+export interface Bookmark {
+	carId: string;
+	id: string;
+	userId: string;
+	quantity: number;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface Car {
+	bookmark: Bookmark;
 	id: string;
 	toyCode: string;
 	toyIndex: string;
