@@ -12,6 +12,7 @@ import { adminMiddleware } from "./middlewares/admin-middleware";
 import {
 	type AuthVariables,
 	authMiddleware,
+	optionalAuthMiddleware,
 } from "./middlewares/auth-middleware";
 
 const app = new Hono<{
@@ -71,6 +72,7 @@ app.get("/upsert/:year", adminMiddleware, async ({ json, env, req }) => {
 
 app.get(
 	"/v1/cars",
+	optionalAuthMiddleware,
 	zValidator(
 		"query",
 		z.object({
@@ -82,17 +84,23 @@ app.get(
 			year: z.string().optional(),
 		}),
 	),
-	async ({ json, env, req }) => {
+	async ({ json, env, req, get }) => {
 		try {
+			const user = get("user");
 			const { page, limit, sortBy, sortOrder, year, q } = req.valid("query");
 			const carsRepo = new CarsRepository(env);
 			return json(
-				await carsRepo.paginate(parseInt(page, 10), parseInt(limit, 10), {
-					sortBy,
-					sortOrder,
-					year,
-					q,
-				}),
+				await carsRepo.paginate(
+					parseInt(page, 10),
+					parseInt(limit, 10),
+					{
+						sortBy,
+						sortOrder,
+						year,
+						q,
+					},
+					user.id,
+				),
 			);
 		} catch (err: any) {
 			console.log(err);
@@ -103,6 +111,7 @@ app.get(
 
 app.get(
 	"/v1/series/:id",
+	optionalAuthMiddleware,
 	zValidator(
 		"query",
 		z.object({
@@ -114,8 +123,9 @@ app.get(
 			year: z.string().optional(),
 		}),
 	),
-	async ({ json, env, req }) => {
+	async ({ json, env, req, get }) => {
 		try {
+			const user = get("user");
 			const { page, limit, sortBy, sortOrder, year, q } = req.valid("query");
 			const { id } = req.param();
 			const carsRepo = new CarsRepository(env);
@@ -130,6 +140,7 @@ app.get(
 						year,
 						q,
 					},
+					user.id,
 				),
 			);
 		} catch (err: any) {

@@ -26,3 +26,22 @@ export const authMiddleware = createMiddleware(
 		}
 	},
 );
+
+export const optionalAuthMiddleware = createMiddleware(
+	async ({ env, req, set, json }, next) => {
+		try {
+			const session = await auth(env).api.getSession({
+				headers: req.raw.headers,
+			});
+			if (session) {
+				set("session", session);
+				if (session.user) {
+					set("user", session.user);
+				}
+			}
+			await next();
+		} catch (err: any) {
+			return json({ message: err.message, httpStatus: 401, status: 0 }, 401);
+		}
+	},
+);

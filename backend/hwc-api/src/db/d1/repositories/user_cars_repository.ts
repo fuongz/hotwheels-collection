@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { dbClient } from "..";
 import { type NewUserCar, type UserCar, userCars } from "../schema";
@@ -19,6 +19,17 @@ export class UserCarsRepository {
 			.from(userCars)
 			.where(and(eq(userCars.userId, userId), eq(userCars.carId, carId)))
 			.get();
+	}
+
+	async findByUserIdAndCarIds(
+		userId: string,
+		carIds: string[],
+	): Promise<UserCar[]> {
+		return await this.db
+			.select()
+			.from(userCars)
+			.where(and(eq(userCars.userId, userId), inArray(userCars.carId, carIds)))
+			.all();
 	}
 
 	async upsert(
