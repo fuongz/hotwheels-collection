@@ -122,31 +122,30 @@ export function CarCard({ car }: CarCardProps) {
 
 			{session?.user && (
 				<CardFooter className="py-2">
-					{/* Save Button - Only show if user is logged in */}
-					(!car.bookmark ? (
-					<Button
-						size="xs"
-						variant="secondary"
-						onClick={handleSave}
-						disabled={isSaving}
-					>
-						<HugeiconsIcon
-							icon={BookmarkAdd01Icon}
-							className="size-4"
-							strokeWidth={2}
-						/>
-						Save to collection
-					</Button>
+					{!car.bookmark ? (
+						<Button
+							size="xs"
+							variant="secondary"
+							onClick={handleSave}
+							disabled={isSaving}
+						>
+							<HugeiconsIcon
+								icon={BookmarkAdd01Icon}
+								className="size-4"
+								strokeWidth={2}
+							/>
+							Save to collection
+						</Button>
 					) : (
-					<Badge variant="destructive">
-						<HugeiconsIcon
-							icon={BookmarkCheck02Icon}
-							className="size-4"
-							strokeWidth={2}
-						/>
-						Owned
-					</Badge>
-					))
+						<Badge variant="destructive">
+							<HugeiconsIcon
+								icon={BookmarkCheck02Icon}
+								className="size-4"
+								strokeWidth={2}
+							/>
+							Owned
+						</Badge>
+					)}
 				</CardFooter>
 			)}
 		</Card>
