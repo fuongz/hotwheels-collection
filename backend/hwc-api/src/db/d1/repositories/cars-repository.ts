@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { CacheService } from "../../../cache/kv/cache.service";
+import { StorageService } from "../../../storages/r2";
 import { dbClient } from "..";
 import {
 	type Car,
@@ -21,10 +22,12 @@ type CarWithSeries = Partial<Car> & {
 export class CarsRepository {
 	private db: DrizzleD1Database;
 	private cache: CacheService;
+	private storage: StorageService;
 
 	constructor(env: CloudflareBindings) {
 		this.db = dbClient(env.DB);
 		this.cache = new CacheService(env.KV);
+		this.storage = new StorageService(env);
 	}
 
 	private buildCarsWithSeriesQuery() {
@@ -586,5 +589,35 @@ LEFT JOIN ${carSeries} cc ON c.id = cc.car_id`;
 		};
 		await this.cache.set(cacheKey, response, 86_400);
 		return this.responseWithBookmarks(response, userId);
+	}
+
+	async removeImage(carId: string): Promise<Car> {
+		// Get the car to check if it has an avatar
+		const car = await this.db
+			.select()
+			.from(cars)
+			.where(eq(cars.id, carId))
+			.get();
+
+		if (!car) {
+			throw new Error(`Car with id ${carId} not found`);
+		}
+
+		// If car has an avatarUrl with r2:// prefix, delete from R2
+		if (car.avatarUrl?.startsWith("r2://")) {
+			await this.storage.removeObject(car.avatarUrl);
+		}
+
+		// Update the car to set avatarUrl to null
+		const [updated] = await this.db
+			.update(cars)
+			.set({
+				avatarUrl: null,
+				updatedAt: new Date(),
+			})
+			.where(eq(cars.id, carId))
+			.returning();
+
+		return updated;
 	}
 }

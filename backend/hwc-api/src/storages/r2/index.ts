@@ -64,3 +64,36 @@ export function generatePhotoKey(
 	// Generate path: cars/{year}/{toyCode}/{index}.{ext}
 	return `cars/${year}/${sanitizedCode}/${index}.${extension}`;
 }
+
+export class StorageService {
+	private bucket: R2Bucket | null;
+
+	constructor(env: CloudflareBindings) {
+		this.bucket = r2Client(env, "BUCKET");
+	}
+
+	async removeObject(key: string) {
+		if (!this.bucket) throw new Error("Storage not found");
+		try {
+			// -- extract the key by removing the r2:// prefix
+			key = key.replace(/^r2:\/\//, "");
+			await this.bucket.delete(key);
+			console.log(`----> LOG [R2] Deleted image from R2: ${key}`);
+			return {
+				status: true,
+				data: key,
+				message: "Image deleted from R2",
+			};
+		} catch (error) {
+			console.error(
+				`----> ERROR [R2] Failed to delete image from R2: ${key}`,
+				error,
+			);
+			return {
+				status: false,
+				data: key,
+				message: "Failed to delete image from R2",
+			};
+		}
+	}
+}

@@ -6,13 +6,12 @@ import { CacheService } from "../cache/kv/cache.service";
 // -- repositories
 import { CarsRepository } from "../db/d1/repositories/cars-repository";
 import { UserCarsRepository } from "../db/d1/repositories/user-cars-repository";
-
+import { adminMiddleware } from "../middlewares/admin-middleware";
 // -- middlewares
 import {
 	authMiddleware,
 	optionalAuthMiddleware,
 } from "../middlewares/auth-middleware";
-
 // -- types
 import type { App } from "../types";
 
@@ -61,7 +60,7 @@ app.get(
 // - AUTHENTICATED
 // ----------------------------------------------------------------------------
 app.post(
-	"/v1/cars/:carId/save",
+	"/:carId/save",
 	authMiddleware,
 	zValidator(
 		"json",
@@ -130,6 +129,24 @@ app.post(
 		} catch (err: any) {
 			console.log(err);
 			return c.json({ error: err.message }, 500);
+		}
+	},
+);
+
+// ----------------------------------------------------------------------------
+// - ADMIN
+// ----------------------------------------------------------------------------
+app.post(
+	"/:carId/remove-image",
+	adminMiddleware,
+	async ({ env, req, json }) => {
+		try {
+			const { carId } = req.param();
+			const carsRepo = new CarsRepository(env);
+			return json(await carsRepo.removeImage(carId));
+		} catch (err: any) {
+			console.log(err);
+			return json({ error: err.message }, 500);
 		}
 	},
 );
