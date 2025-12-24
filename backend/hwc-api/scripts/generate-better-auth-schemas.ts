@@ -5,7 +5,7 @@ import { auth } from "../src/auth";
 import { generateDrizzleSchema } from "./_vendor/drizzle";
 
 export default async (env: CloudflareBindings) => {
-	const betterAuth = auth(env);
+	const betterAuth = await auth(env);
 	const output = await generateDrizzleSchema({
 		adapter: await getAdapter(betterAuth.options),
 		options: betterAuth.options,

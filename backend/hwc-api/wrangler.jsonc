@@ -39,5 +39,22 @@
 			"preview_bucket_name": "prod-hotwheels-collection",
 			"remote": true
 		}
+	],
+	"secrets_store_secrets": [
+		{
+			"binding": "BETTER_AUTH_SECRET",
+			"store_id": "ef976ac39100478aba6557b43644d595",
+			"secret_name": "HWC_BETTER_AUTH_SECRET"
+		},
+		{
+			"binding": "GOOGLE_CLIENT_ID",
+			"store_id": "ef976ac39100478aba6557b43644d595",
+			"secret_name": "PHAKEAPPS_GOOGLE_CLIENT_ID"
+		},
+		{
+			"binding": "GOOGLE_CLIENT_SECRET",
+			"store_id": "ef976ac39100478aba6557b43644d595",
+			"secret_name": "PHAKEAPPS_GOOGLE_CLIENT_SECRET"
+		},
 	]
 }

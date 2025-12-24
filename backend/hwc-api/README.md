@@ -8,6 +8,28 @@
 4. Run the server: `bun run dev`
 5. Access the API: `http://localhost:8788`
 
+## Environment Variables
+1. `BETTER_AUTH_SECRET` - Secret key for better-auth
+
+```bash
+bun wrangler secrets-store secret create ef976ac39100478aba6557b43644d595 --name HWC_BETTER_AUTH_SECRET --value <your-secret-key> --scopes workers --persist-to ./.wrangler/state
+```
+> Note: Update `<your-secret-key>` with your actual secret key. `ef976ac39100478aba6557b43644d595` is just an example for my reference.
+
+2. `GOOGLE_CLIENT_ID` - Client ID for Google OAuth2
+
+```bash
+bun wrangler secrets-store secret create ef976ac39100478aba6557b43644d595 --name PHAKEAPPS_GOOGLE_CLIENT_ID --value <your-client-id> --scopes workers --persist-to ./.wrangler/state
+```
+> Note: Update `<your-client-id>` with your actual client ID. `ef976ac39100478aba6557b43644d595` is just an example for my reference.
+
+3. `GOOGLE_CLIENT_SECRET` - Client secret for Google OAuth2
+
+```bash
+bun wrangler secrets-store secret create ef976ac39100478aba6557b43644d595 --name PHAKEAPPS_GOOGLE_CLIENT_SECRET --value <your-client-secret> --scopes workers --persist-to ./.wrangler/state
+```
+> Note: Update `<your-client-secret>` with your actual secret key. `ef976ac39100478aba6557b43644d595` is just an example for my reference.
+
 ## Commands
 
 | Command | Description |

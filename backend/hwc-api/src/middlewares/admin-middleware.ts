@@ -10,7 +10,8 @@ export type AuthVariables = {
 export const adminMiddleware = createMiddleware(
 	async ({ env, req, set, json }, next) => {
 		try {
-			const session = await auth(env).api.getSession({
+			const authClient = await auth(env);
+			const session = await authClient.api.getSession({
 				headers: req.raw.headers,
 			});
 			if (!session) {

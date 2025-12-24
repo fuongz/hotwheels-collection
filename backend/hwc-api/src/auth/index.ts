@@ -4,7 +4,12 @@ import { admin } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/d1/schemas/auth";
 
-export const auth = (env: CloudflareBindings) => {
+export const auth = async (env: CloudflareBindings) => {
+	// -- get secrets from cf->secrets store
+	const secretKey = await env.BETTER_AUTH_SECRET.get();
+	const googleClientId = await env.GOOGLE_CLIENT_ID.get();
+	const googleClientSecret = await env.GOOGLE_CLIENT_SECRET.get();
+
 	return betterAuth({
 		database: drizzleAdapter(drizzle(env.DB), {
 			provider: "sqlite",
@@ -47,8 +52,8 @@ export const auth = (env: CloudflareBindings) => {
 		baseUrl: env.BETTER_AUTH_URL,
 		socialProviders: {
 			google: {
-				clientId: env.GOOGLE_CLIENT_ID,
-				clientSecret: env.GOOGLE_CLIENT_SECRET,
+				clientId: googleClientId,
+				clientSecret: googleClientSecret,
 				accessType: "offline",
 				prompt: "select_account consent",
 			},
@@ -63,7 +68,7 @@ export const auth = (env: CloudflareBindings) => {
 			},
 		},
 		trustedOrigins: [env.FRONTEND_URL],
-		secret: env.BETTER_AUTH_SECRET,
+		secret: secretKey,
 		baseURL: env.BETTER_AUTH_URL,
 		plugins: [admin()],
 	});

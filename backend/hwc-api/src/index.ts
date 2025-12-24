@@ -33,8 +33,9 @@ app.use("/api/auth/*", async (c, next) => {
 	return corsHandler(c, next);
 });
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => {
-	return auth(c.env).handler(c.req.raw);
+app.on(["POST", "GET"], "/api/auth/*", async (c) => {
+	const handler = await auth(c.env);
+	return handler.handler(c.req.raw);
 });
 
 // -- routes
