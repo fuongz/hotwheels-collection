@@ -5,6 +5,8 @@ import {
 	BookmarkCheck02Icon,
 	Folder01Icon,
 	ImageDownload02Icon,
+	ImageNotFound01Icon,
+	MoreHorizontalFreeIcons,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
@@ -14,6 +16,12 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
@@ -53,6 +61,23 @@ export function CarCard({
 			error: () => {
 				setIsSaving(false);
 				return "Failed to save car";
+			},
+		});
+	};
+
+	const handleRemoveImage = async () => {
+		if (!session?.user || session.user.role !== "admin") {
+			toast.error("You must be an admin to remove an image");
+			return;
+		}
+		toast.promise(api.post(`/cars/${car.id}/remove-image`), {
+			loading: "Removing image...",
+			success: () => {
+				setIsImageError(true);
+				return "Image removed";
+			},
+			error: () => {
+				return "Failed to remove image";
 			},
 		});
 	};
@@ -124,8 +149,8 @@ export function CarCard({
 							</span>
 						</div>
 						<div className="flex items-center mt-2 flex-wrap gap-2">
-							{car.series?.map((s) => (
-								<Link href={`/collections/${s.id}`} key={s.id}>
+							{car.series?.map((s, index: number) => (
+								<Link href={`/collections/${s.id}`} key={`${s.id}-${index}`}>
 									<span
 										className={cn(
 											"dark:bg-orange-900/50 dark:hover:bg-orange-900 dark:text-orange-50",
@@ -168,6 +193,32 @@ export function CarCard({
 							/>
 							Owned
 						</Badge>
+					)}
+
+					{session.user.role === "admin" && (
+						<div className="ml-auto">
+							<DropdownMenu>
+								<DropdownMenuTrigger
+									render={<Button size="icon-xs" variant="secondary" />}
+								>
+									<HugeiconsIcon
+										icon={MoreHorizontalFreeIcons}
+										className="size-4"
+										strokeWidth={2}
+									/>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end" className="w-40">
+									<DropdownMenuItem onClick={handleRemoveImage}>
+										<HugeiconsIcon
+											icon={ImageNotFound01Icon}
+											className="size-4 mr-2"
+											strokeWidth={2}
+										/>
+										Remove image
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</div>
 					)}
 				</CardFooter>
 			)}
