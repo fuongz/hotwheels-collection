@@ -21,7 +21,13 @@ export const auth = (env: CloudflareBindings) => {
 		emailAndPassword: {
 			enabled: true,
 		},
-		trustedOrigins: ["http://localhost:3001", "https://hotwheels.phake.app"],
+		account: {
+			accountLinking: {
+				enabled: true,
+				trustedProviders: ["google"],
+			},
+		},
+		trustedOrigins: [env.FRONTEND_URL],
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.BETTER_AUTH_URL,
 	});

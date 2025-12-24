@@ -1,7 +1,7 @@
 import { DrizzleD1Database } from "drizzle-orm/d1";
 import { inArray } from "drizzle-orm";
 import { dbClient } from "../src/db/d1";
-import { CarsRepository } from "../src/db/d1/repositories/cars_repository";
+import { CarsRepository } from "../src/db/d1/repositories/cars-repository";
 import { SeriesRepository } from "../src/db/d1/repositories/series_repository";
 import { CarSeriesRepository } from "../src/db/d1/repositories/car_series_repository";
 import { CacheService } from "../src/cache/kv/cache.service";
