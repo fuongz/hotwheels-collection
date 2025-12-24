@@ -10,6 +10,31 @@ export const auth = (env: CloudflareBindings) => {
 			provider: "sqlite",
 			schema: schema,
 		}),
+		secondaryStorage: {
+			get: async (key: string) => {
+				try {
+					const value = await env.KV.get(key);
+					return value;
+				} catch (error: any) {
+					console.log("----> LOG [ERR:AUTH]:", error);
+					return null;
+				}
+			},
+			set: async (key: string, value: string) => {
+				try {
+					await env.KV.put(key, value, { expirationTtl: 60 * 60 * 24 * 7 });
+				} catch (error: any) {
+					console.log("----> LOG [ERR:AUTH]:", error);
+				}
+			},
+			delete: async (key: string) => {
+				try {
+					await env.KV.delete(key);
+				} catch (error: any) {
+					console.log("----> LOG [ERR:AUTH]:", error);
+				}
+			},
+		},
 		baseUrl: env.BETTER_AUTH_URL,
 		socialProviders: {
 			google: {
