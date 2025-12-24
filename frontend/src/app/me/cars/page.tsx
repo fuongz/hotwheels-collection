@@ -205,7 +205,7 @@ function UserCarsPageContent() {
 						/>
 					) : (
 						<CarsSeriesView
-							gridColumns={gridColumns}
+							gridColumns={12}
 							cars={carsData}
 							meta={meta}
 							onSaved={(_car) => mutate()}

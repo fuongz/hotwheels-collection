@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { CarCard } from "@/components/car-card";
+import { Separator } from "@/components/ui";
 import type { Car, Series } from "@/types/car";
 
 export function CarsSeriesView({
@@ -72,12 +73,12 @@ export function CarsSeriesView({
 			</div>
 
 			{/* Grouped Cars by Series/Collection */}
-			<div className="space-y-8">
+			<div className="space-y-6">
 				{groupedCars.map((group) => (
 					<div key={group.series.id} className="space-y-4">
 						{/* Collection Header */}
-						<div className="flex items-center gap-3 pb-2 border-b border-border">
-							<h2 className="text-xl font-bold text-foreground">
+						<div className="flex items-center gap-3">
+							<h2 className="text-base font-bold text-foreground">
 								{group.series.name}
 							</h2>
 						</div>
@@ -89,7 +90,9 @@ export function CarsSeriesView({
 									? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
 									: gridColumns === 4
 										? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-										: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6"
+										: gridColumns === 6
+											? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6"
+											: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8"
 							}`}
 						>
 							{group.cars.map((car) => (
@@ -102,6 +105,7 @@ export function CarsSeriesView({
 								/>
 							))}
 						</div>
+						<Separator />
 					</div>
 				))}
 			</div>
