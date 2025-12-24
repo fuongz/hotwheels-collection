@@ -10,6 +10,15 @@ export const auth = (env: CloudflareBindings) => {
 			provider: "sqlite",
 			schema: schema,
 		}),
+		advanced: {
+			ipAddress: {
+				ipAddressHeaders: ["cf-connecting-ip"],
+			},
+		},
+		rateLimit: {
+			enabled: true,
+			storage: "secondary-storage",
+		},
 		secondaryStorage: {
 			get: async (key: string) => {
 				try {
