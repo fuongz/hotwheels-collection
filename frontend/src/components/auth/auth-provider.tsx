@@ -11,6 +11,7 @@ import { useSession } from "@/lib/auth-client";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const { data: session, isPending } = useSession();
+
 	return (
 		<>
 			{/* Header */}

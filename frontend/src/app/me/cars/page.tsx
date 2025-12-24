@@ -1,18 +1,12 @@
 "use client";
 
-import {
-	ArrowLeft01Icon,
-	CryingIcon,
-	Fire02Icon,
-} from "@hugeicons/core-free-icons";
+import { CryingIcon, Fire02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { CarsListView } from "@/components/cars/views/list-view";
 import { CarsSeriesView } from "@/components/cars/views/series-view";
 import { CollectionFilters } from "@/components/collection-filters";
-import { Button } from "@/components/ui/button";
 import {
 	Pagination,
 	PaginationContent,
@@ -89,54 +83,64 @@ function UserCarsPageContent() {
 	const totalPages = meta ? Math.ceil(meta.total / meta.limit) : 1;
 
 	return (
-		<div className="container mx-auto px-4 pt-6 pb-6">
+		<div className="pt-4">
 			{/* Back Button and Title */}
-			<div className="mb-6">
-				<Link href="/">
-					<Button variant="secondary" size="sm" className="cursor-pointer mb-4">
-						<HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 mr-2" />
-						Back to Home
-					</Button>
-				</Link>
+			<div className="container mx-auto px-4">
+				<div>
+					<h1 className="text-xl font-bold text-foreground mb-2">
+						Your Cars
+						{meta && (
+							<span className="ml-2 text-xs font-normal text-muted-foreground">
+								(
+								<span className="text-foreground font-semibold">
+									{meta.total}
+								</span>{" "}
+								{meta.total === 1 ? "car" : "cars"})
+							</span>
+						)}
+					</h1>
+				</div>
 			</div>
 
 			{/* Filters Section */}
-			<section className="sticky bg-background top-10 z-1">
-				<CollectionFilters
-					year={null}
-					sortBy={sortBy}
-					sortOrder={sortOrder}
-					search={q}
-					searchLoading={isLoading}
-					gridColumns={gridColumns}
-					view={view as "list" | "series"}
-					onYearChange={(value) => {
-						setYear(value);
-						setCurrentPage(1);
-					}}
-					onSortByChange={(value) => {
-						setSortBy(value);
-						setCurrentPage(1);
-					}}
-					onSortOrderChange={(value) => {
-						setSortOrder(value);
-						setCurrentPage(1);
-					}}
-					onSearchChange={(value) => {
-						setQ(value);
-						setCurrentPage(1);
-					}}
-					onGridColumnsChange={(value) => {
-						setGridColumns(value);
-					}}
-					onViewChange={(value) => {
-						setView(value);
-					}}
-					showViewToggle
-				/>
-			</section>
+			<div className="sticky bg-background/90 backdrop-blur-sm top-9.5 z-1 w-full">
+				<section className="container mx-auto px-4">
+					<CollectionFilters
+						year={null}
+						sortBy={sortBy}
+						sortOrder={sortOrder}
+						search={q}
+						searchLoading={isLoading}
+						gridColumns={gridColumns}
+						view={view as "list" | "series"}
+						onYearChange={(value) => {
+							setYear(value);
+							setCurrentPage(1);
+						}}
+						onSortByChange={(value) => {
+							setSortBy(value);
+							setCurrentPage(1);
+						}}
+						onSortOrderChange={(value) => {
+							setSortOrder(value);
+							setCurrentPage(1);
+						}}
+						onSearchChange={(value) => {
+							setQ(value);
+							setCurrentPage(1);
+						}}
+						onGridColumnsChange={(value) => {
+							setGridColumns(value);
+						}}
+						onViewChange={(value) => {
+							setView(value);
+						}}
+						showViewToggle
+					/>
+				</section>
+			</div>
 
-			<main className="space-y-8 mx-[1px]">
+			<main className="container mx-auto px-4 space-y-8">
 				{/* Loading State */}
 				{isLoading && (
 					<div className="text-center py-16">

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	ArrowDown01Icon,
 	CarParking02Icon,
 	Logout01Icon,
 	SettingsIcon,
@@ -43,9 +44,12 @@ export function UserOptions() {
 							<HugeiconsIcon icon={UserIcon} className="size-2" />
 						</AvatarFallback>
 					</Avatar>
-					<span className="max-w-[250px] truncate">{session?.user.email}</span>
+					<span className="max-w-[250px] truncate hidden sm:block">
+						{session?.user.email}
+					</span>
+					<HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} />
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="max-w-100">
+				<DropdownMenuContent align="end" className="w-60 sm:w-none max-w-100">
 					<DropdownMenuGroup>
 						<DropdownMenuLabel>
 							<div className="flex flex-col text-foreground space-y-1">

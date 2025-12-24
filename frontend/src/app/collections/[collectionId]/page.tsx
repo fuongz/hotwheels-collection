@@ -1,18 +1,12 @@
 "use client";
 
-import {
-	ArrowLeft01Icon,
-	CryingIcon,
-	Fire02Icon,
-} from "@hugeicons/core-free-icons";
+import { CryingIcon, Fire02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { CarsListView } from "@/components/cars/views/list-view";
 import { CollectionFilters } from "@/components/collection-filters";
-import { Button } from "@/components/ui/button";
 import {
 	Pagination,
 	PaginationContent,
@@ -95,15 +89,9 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 	const totalPages = meta ? Math.ceil(meta.total / meta.limit) : 1;
 
 	return (
-		<div className="container mx-auto px-4 pt-6 pb-6">
+		<div className="pt-4">
 			{/* Back Button and Title */}
-			<div className="mb-6">
-				<Link href="/">
-					<Button variant="secondary" size="sm" className="cursor-pointer mb-4">
-						<HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 mr-2" />
-						Back to Collections
-					</Button>
-				</Link>
+			<div className="container mx-auto px-4">
 				{seriesName && (
 					<div>
 						<h1 className="text-xl font-bold text-foreground mb-2">
@@ -122,36 +110,38 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 			</div>
 
 			{/* Filters Section */}
-			<section className="sticky bg-background top-10 z-1">
-				<CollectionFilters
-					year={null}
-					sortBy={sortBy}
-					sortOrder={sortOrder}
-					search={q}
-					searchLoading={isLoading}
-					gridColumns={gridColumns}
-					onYearChange={() => {}}
-					onSortByChange={(value) => {
-						setSortBy(value);
-						setCurrentPage(1);
-					}}
-					onSortOrderChange={(value) => {
-						setSortOrder(value);
-						setCurrentPage(1);
-					}}
-					onSearchChange={(value) => {
-						setQ(value);
-						setCurrentPage(1);
-					}}
-					onGridColumnsChange={(value) => {
-						setGridColumns(value);
-					}}
-					hideYearFilter
-				/>
-			</section>
+			<div className="sticky bg-background/90 backdrop-blur-sm top-9.5 z-1 w-full">
+				<section className="container mx-auto px-4">
+					<CollectionFilters
+						year={null}
+						sortBy={sortBy}
+						sortOrder={sortOrder}
+						search={q}
+						searchLoading={isLoading}
+						gridColumns={gridColumns}
+						onYearChange={() => {}}
+						onSortByChange={(value) => {
+							setSortBy(value);
+							setCurrentPage(1);
+						}}
+						onSortOrderChange={(value) => {
+							setSortOrder(value);
+							setCurrentPage(1);
+						}}
+						onSearchChange={(value) => {
+							setQ(value);
+							setCurrentPage(1);
+						}}
+						onGridColumnsChange={(value) => {
+							setGridColumns(value);
+						}}
+						hideYearFilter
+					/>
+				</section>
+			</div>
 
 			{/* Main Content */}
-			<main className="space-y-8 mx-[1px]">
+			<main className="space-y-8 container mx-auto px-4">
 				{/* Loading State */}
 				{isLoading && (
 					<div className="text-center py-16">

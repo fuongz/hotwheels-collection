@@ -25,6 +25,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Separator } from "./ui";
 import { Button } from "./ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
@@ -71,17 +72,20 @@ export function CollectionFilters({
 	hideYearFilter = false,
 	showViewToggle = false,
 }: CollectionFiltersProps) {
-	// Local state for immediate input updates
+	// -- local state for immediate input updates
 	const [searchInput, setSearchInput] = useState(search || "");
 
-	// Sync local state with prop when prop changes externally
+	// -- hooks
+	const isMobile = useIsMobile();
+
+	// -- sync local state with prop when prop changes externally
 	useEffect(() => {
 		setSearchInput(search || "");
 	}, [search]);
 	const years = Array.from({ length: 12 }, (_, i) => (2015 + i).toString());
 
 	return (
-		<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4">
+		<div className="flex flex-col flex-wrap md:flex-row md:items-center md:justify-between gap-4 py-4">
 			<div className="flex items-center gap-3 sm:gap-4">
 				{/* Year Filter */}
 				{!hideYearFilter && (
@@ -162,45 +166,47 @@ export function CollectionFilters({
 			{/* Layout and Search Bar */}
 			<div className="flex items-center gap-2">
 				{/* Layout Change Button */}
-				<TooltipProvider>
-					<DropdownMenu>
-						<Tooltip>
-							<TooltipTrigger
-								render={
-									<DropdownMenuTrigger
-										render={
-											<Button variant="outline" className="cursor-pointer" />
-										}
-									/>
-								}
-							>
-								<HugeiconsIcon icon={Layout01Icon} />
-								{gridColumns} columns
-								<span className="sr-only">change layout</span>
-							</TooltipTrigger>
-							<TooltipContent>
-								<p>change layout</p>
-							</TooltipContent>
-						</Tooltip>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem onClick={() => onGridColumnsChange(3)}>
-								<span className={gridColumns === 3 ? "font-semibold" : ""}>
-									3 columns
-								</span>
-							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => onGridColumnsChange(4)}>
-								<span className={gridColumns === 4 ? "font-semibold" : ""}>
-									4 columns
-								</span>
-							</DropdownMenuItem>
-							<DropdownMenuItem onClick={() => onGridColumnsChange(6)}>
-								<span className={gridColumns === 6 ? "font-semibold" : ""}>
-									6 columns
-								</span>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</TooltipProvider>
+				{!isMobile && (
+					<TooltipProvider>
+						<DropdownMenu>
+							<Tooltip>
+								<TooltipTrigger
+									render={
+										<DropdownMenuTrigger
+											render={
+												<Button variant="outline" className="cursor-pointer" />
+											}
+										/>
+									}
+								>
+									<HugeiconsIcon icon={Layout01Icon} />
+									{gridColumns} columns
+									<span className="sr-only">change layout</span>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>change layout</p>
+								</TooltipContent>
+							</Tooltip>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem onClick={() => onGridColumnsChange(3)}>
+									<span className={gridColumns === 3 ? "font-semibold" : ""}>
+										3 columns
+									</span>
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => onGridColumnsChange(4)}>
+									<span className={gridColumns === 4 ? "font-semibold" : ""}>
+										4 columns
+									</span>
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => onGridColumnsChange(6)}>
+									<span className={gridColumns === 6 ? "font-semibold" : ""}>
+										6 columns
+									</span>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</TooltipProvider>
+				)}
 
 				{/* View Change Button */}
 				{showViewToggle && (
@@ -249,7 +255,7 @@ export function CollectionFilters({
 						placeholder="search cars..."
 						value={searchInput}
 						onChange={(e) => setSearchInput(e.target.value)}
-						className="w-full md:w-[250px] pl-8"
+						className="w-full xl:w-[250px] pl-8"
 						onKeyDown={(e) => e.key === "Enter" && onSearchChange(searchInput)}
 					/>
 					<InputGroupAddon align="inline-end">
