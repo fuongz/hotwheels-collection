@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useMemo } from "react";
 import { CarCard } from "@/components/car-card";
 import { Separator } from "@/components/ui";
@@ -79,7 +80,15 @@ export function CarsSeriesView({
 						{/* Collection Header */}
 						<div className="flex items-center gap-3">
 							<h2 className="text-base font-bold text-foreground">
-								{group.series.name}
+								<Link
+									href={`/collections/${group.series.id}`}
+									className="hover:underline"
+								>
+									{group.series.name}
+								</Link>
+								<span className="font-normal ml-2 text-muted-foreground">
+									({group.cars.length}/{group.series.seriesNum || "?"})
+								</span>
 							</h2>
 						</div>
 
