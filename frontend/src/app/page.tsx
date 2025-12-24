@@ -44,6 +44,7 @@ function CollectionPageContent() {
 		data: response,
 		error,
 		isLoading,
+		mutate,
 	} = useApi<Car[]>([
 		"/cars",
 		{
@@ -189,7 +190,7 @@ function CollectionPageContent() {
 							}`}
 						>
 							{carsData.map((car) => (
-								<CarCard key={car.id} car={car} />
+								<CarCard key={car.id} car={car} onSaved={() => mutate} />
 							))}
 						</div>
 

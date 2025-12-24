@@ -7,7 +7,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { CarCard } from "@/components/car-card";
@@ -24,17 +23,15 @@ import {
 } from "@/components/ui/pagination";
 import { Spinner } from "@/components/ui/spinner";
 import { useApi } from "@/hooks/use-api";
+import { useSession } from "@/lib/auth-client";
 import type { Car } from "@/types/car";
 
-interface CollectionPageContentProps {
-	collectionId: string;
-}
-
-function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
+function UserCarsPageContent() {
 	const [currentPage, setCurrentPage] = useQueryState(
 		"page",
 		parseAsInteger.withDefault(1),
 	);
+	const [year, setYear] = useQueryState("year", parseAsString.withDefault(""));
 	const [sortBy, setSortBy] = useQueryState(
 		"sortBy",
 		parseAsString.withDefault("year"),
@@ -56,12 +53,13 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 		isLoading,
 		mutate,
 	} = useApi<Car[]>([
-		`/series/${collectionId}`,
+		`/me/cars`,
 		{
 			page: currentPage,
 			limit,
 			sortBy,
 			sortOrder,
+			year,
 			q,
 		},
 	]);
@@ -82,15 +80,6 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 		}));
 	}, [apiCars]);
 
-	// Get series name from the first car's series data
-	const seriesName = useMemo(() => {
-		if (carsData.length > 0 && carsData[0].series?.length > 0) {
-			const series = carsData[0].series.find((s) => s.id === collectionId);
-			return series?.name;
-		}
-		return null;
-	}, [carsData, collectionId]);
-
 	// Calculate total pages
 	const totalPages = meta ? Math.ceil(meta.total / meta.limit) : 1;
 
@@ -101,24 +90,9 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 				<Link href="/">
 					<Button variant="secondary" size="sm" className="cursor-pointer mb-4">
 						<HugeiconsIcon icon={ArrowLeft01Icon} className="size-4 mr-2" />
-						Back to Collections
+						Back to Home
 					</Button>
 				</Link>
-				{seriesName && (
-					<div>
-						<h1 className="text-xl font-bold text-foreground mb-2">
-							{seriesName}
-						</h1>
-						{meta && (
-							<p className="text-sm text-muted-foreground">
-								<span className="font-semibold text-foreground">
-									{meta.total} {meta.total === 1 ? "car" : "cars"}
-								</span>{" "}
-								in this collection
-							</p>
-						)}
-					</div>
-				)}
 			</div>
 
 			{/* Filters Section */}
@@ -130,7 +104,10 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 					search={q}
 					searchLoading={isLoading}
 					gridColumns={gridColumns}
-					onYearChange={() => {}}
+					onYearChange={(value) => {
+						setYear(value);
+						setCurrentPage(1);
+					}}
 					onSortByChange={(value) => {
 						setSortBy(value);
 						setCurrentPage(1);
@@ -146,7 +123,6 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 					onGridColumnsChange={(value) => {
 						setGridColumns(value);
 					}}
-					hideYearFilter
 				/>
 			</section>
 
@@ -232,7 +208,12 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 							}`}
 						>
 							{carsData.map((car) => (
-								<CarCard key={car.id} car={car} onSaved={() => mutate()} />
+								<CarCard
+									key={car.id}
+									car={car}
+									hideOwnedBadge
+									onSaved={() => mutate()}
+								/>
 							))}
 						</div>
 
@@ -326,9 +307,9 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 	);
 }
 
-export default function CarCollectionPage() {
-	const { collectionId } = useParams<{ collectionId: string }>();
-	return !collectionId ? (
+export default function UserCarsPage() {
+	const { isPending } = useSession();
+	return isPending ? (
 		<div className="container mx-auto px-4 pb-6">
 			<div className="text-center py-16">
 				<Spinner size="xl" />
@@ -338,6 +319,6 @@ export default function CarCollectionPage() {
 			</div>
 		</div>
 	) : (
-		<CollectionPageContent collectionId={collectionId} />
+		<UserCarsPageContent />
 	);
 }

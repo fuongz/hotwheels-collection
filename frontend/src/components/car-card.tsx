@@ -21,9 +21,11 @@ import type { Car } from "@/types/car";
 
 interface CarCardProps {
 	car: Car;
+	onSaved?: () => void;
+	hideOwnedBadge?: boolean;
 }
 
-export function CarCard({ car }: CarCardProps) {
+export function CarCard({ car, onSaved, hideOwnedBadge }: CarCardProps) {
 	const [isImageError, setIsImageError] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const { data: session } = useSession();
@@ -39,6 +41,7 @@ export function CarCard({ car }: CarCardProps) {
 			loading: "Saving...",
 			success: () => {
 				setIsSaving(false);
+				onSaved?.();
 				return "Car saved";
 			},
 			error: () => {
@@ -49,7 +52,13 @@ export function CarCard({ car }: CarCardProps) {
 	};
 
 	return (
-		<Card className={`group overflow-hidden transition-all p-0`}>
+		<Card
+			className={cn(
+				"group overflow-hidden transition-all p-0",
+				car.bookmark &&
+					"bg-gradient-to-br from-purple-200 to-pink-50 dark:from-purple-950 dark:to-pink-950 ring-2 ring-purple-200",
+			)}
+		>
 			<div className="relative aspect-[16/9] overflow-hidden">
 				{car.avatarUrl && !isImageError ? (
 					<Image
@@ -91,7 +100,13 @@ export function CarCard({ car }: CarCardProps) {
 					</Badge>
 				</div>
 			</div>
-			<CardContent className={cn("px-4 relative", !session?.user && "pb-4")}>
+			<CardContent
+				className={cn(
+					"px-4 relative",
+					(!session?.user || hideOwnedBadge) && "pb-4",
+					car.bookmark && "border-pink-200",
+				)}
+			>
 				<div className="space-y-2">
 					<h3 className="font-semibold text-sm text-foreground line-clamp-2 leading-relaxed">
 						{car.model}
@@ -120,7 +135,7 @@ export function CarCard({ car }: CarCardProps) {
 				</div>
 			</CardContent>
 
-			{session?.user && (
+			{session?.user && !hideOwnedBadge && (
 				<CardFooter className="py-2">
 					{!car.bookmark ? (
 						<Button
@@ -137,7 +152,7 @@ export function CarCard({ car }: CarCardProps) {
 							Save to collection
 						</Button>
 					) : (
-						<Badge variant="destructive">
+						<Badge variant="purple">
 							<HugeiconsIcon
 								icon={BookmarkCheck02Icon}
 								className="size-4"

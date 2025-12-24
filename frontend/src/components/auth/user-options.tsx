@@ -1,7 +1,12 @@
 "use client";
 
-import { Logout01Icon, UserIcon } from "@hugeicons/core-free-icons";
+import {
+	CarParking02Icon,
+	Logout01Icon,
+	UserIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import Link from "next/link";
 import { signOut, useSession } from "@/lib/auth-client";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Button } from "../ui/button";
@@ -44,6 +49,19 @@ export function UserOptions() {
 							</p>
 						</div>
 					</DropdownMenuLabel>
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuGroup>
+					<DropdownMenuItem
+						className="cursor-pointer"
+						render={<Link href="/me/cars" />}
+					>
+						<HugeiconsIcon
+							icon={CarParking02Icon}
+							className="text-muted-foreground"
+						/>
+						Your cars
+					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
