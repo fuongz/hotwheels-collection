@@ -101,10 +101,6 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 		return created;
 	}
 
-	async findByYear(year: string): Promise<Car[]> {
-		return await this.db.select().from(cars).where(eq(cars.year, year)).all();
-	}
-
 	async responseWithBookmarks(
 		response: {
 			data: CarWithSeries[];
@@ -157,6 +153,208 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 			...response,
 			data: dataWithBookmarks,
 		};
+	}
+
+	async paginateByUserId(
+		userId: string,
+		query: {
+			q?: string;
+			page: number;
+			limit: number;
+			sortBy?: string;
+			sortOrder?: string;
+			year?: string;
+		},
+	): Promise<{
+		data: CarWithSeries[];
+		meta: { page: number; limit: number; total: number };
+	}> {
+		const { page, limit, sortBy, sortOrder, ...whereQueries } = query;
+		const cacheKey = `user:${userId}:cars:${JSON.stringify({ page, limit, query })}`;
+
+		// --------------------
+		// -- check cache first
+		const cached = await this.cache.get<{
+			data: CarWithSeries[];
+			meta: { page: number; limit: number; total: number };
+		}>(cacheKey);
+
+		// -- return cache
+		if (cached) {
+			console.log("----> LOG [CACHE] user cars list found in cache!");
+			return cached;
+		}
+		// --------------------
+
+		const offset = (page - 1) * limit;
+		const conditions = [sql`uc.user_id = ${userId}`];
+
+		// Apply filters
+		if (whereQueries.q) {
+			const searchPattern = `%${whereQueries.q}%`;
+			conditions.push(
+				sql`(c.model LIKE ${searchPattern} OR c.toy_code LIKE ${searchPattern})`,
+			);
+		}
+		if (whereQueries.year) {
+			conditions.push(sql`c.year = ${whereQueries.year}`);
+		}
+
+		// -- check if we have filters (excluding the userId condition)
+		const hasFilters = conditions.length > 1;
+
+		// -- count total (with cache for unfiltered queries)
+		let total = 0;
+		if (!hasFilters) {
+			// -- try to get cached total count for this user
+			const countCacheKey = `user:${userId}:cars:total:count`;
+			const cachedTotal = await this.cache.get<number>(countCacheKey);
+			if (cachedTotal !== null) {
+				console.log("----> LOG [CACHE] total user car count found in cache!");
+				total = cachedTotal;
+			} else {
+				// -- fetch and cache total count for this user
+				const countQuery = sql`
+SELECT COUNT(uc.id) as total
+FROM ${userCars} uc
+WHERE uc.user_id = ${userId}`;
+
+				const countResult = await this.db.run(countQuery);
+				total = (countResult.results[0] as any)?.total || 0;
+				await this.cache.set(countCacheKey, total, 300);
+			}
+		} else {
+			// -- with filters, always query the count
+			let countQuery = sql`
+SELECT COUNT(uc.id) as total
+FROM ${userCars} uc
+INNER JOIN ${cars} c ON uc.car_id = c.id`;
+			countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
+			const countResult = await this.db.run(countQuery);
+			total = (countResult.results[0] as any)?.total || 0;
+		}
+
+		// -- if no results, return early
+		if (total === 0) {
+			const emptyResponse = {
+				data: [],
+				meta: { page, limit, total: 0 },
+			};
+			await this.cache.set(cacheKey, emptyResponse, 300);
+			return emptyResponse;
+		}
+
+		// --------------------
+		// Solution 1: Single Query Approach
+		// Combines user_cars + cars + series in one query
+		// --------------------
+		let sqlQuery = sql`
+SELECT
+	c.id,
+	c.model,
+	c.year,
+	c.wiki_slug as wikiSlug,
+	c.toy_code as toyCode,
+	c.toy_index as toyIndex,
+	c.avatar_url as avatarUrl,
+	c.created_at as createdAt,
+	c.updated_at as updatedAt,
+	uc.id as bookmark_id,
+	uc.quantity as bookmark_quantity,
+	uc.notes as bookmark_notes,
+	uc.created_at as bookmark_createdAt,
+	uc.updated_at as bookmark_updatedAt,
+	COALESCE(
+		json_group_array(
+			CASE
+			WHEN col.id IS NOT NULL
+			THEN json_object(
+				'id', col.id,
+				'name', col.name,
+				'wikiSlug', col.wiki_slug,
+				'seriesNum', col.series_num,
+				'createdAt', col.created_at,
+				'updatedAt', col.updated_at
+			)
+			END
+		) FILTER (WHERE col.id IS NOT NULL),
+		json_array()
+	) as series
+FROM ${userCars} uc
+INNER JOIN ${cars} c ON uc.car_id = c.id
+LEFT JOIN ${carSeries} cc ON c.id = cc.car_id
+LEFT JOIN ${series} col ON cc.series_id = col.id`;
+
+		// -- apply conditions
+		sqlQuery = sql`${sqlQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
+
+		// -- group by
+		sqlQuery = sql`${sqlQuery} GROUP BY c.id, uc.id`;
+
+		// -- map column names to SQL column references
+		const columnMap: Record<string, string> = {
+			model: "c.model",
+			year: "c.year",
+			createdAt: "c.created_at",
+		};
+
+		const orderColumn = sortBy || "createdAt";
+		const orderDirection = (sortOrder || "desc").toUpperCase();
+		const sqlColumn = columnMap[orderColumn] || "c.created_at";
+
+		// -- apply order by
+		sqlQuery = sql`${sqlQuery} ORDER BY ${sql.raw(sqlColumn)} ${sql.raw(orderDirection)}`;
+
+		// -- apply limit and offset
+		sqlQuery = sql`${sqlQuery} LIMIT ${sql.raw(limit.toString())} OFFSET ${sql.raw(offset.toString())}`;
+
+		// -- execute query
+		const result = await this.db.run(sqlQuery);
+
+		if (!result.results || result.results.length === 0) {
+			const emptyResponse = {
+				data: [],
+				meta: { page, limit, total },
+			};
+			await this.cache.set(cacheKey, emptyResponse, 300);
+			return emptyResponse;
+		}
+
+		// -- map results including bookmark data
+		const carsWithSeries = result.results.map((row: any) => ({
+			id: row.id,
+			model: row.model,
+			year: row.year,
+			toyCode: row.toyCode,
+			toyIndex: row.toyIndex,
+			avatarUrl: row.avatarUrl,
+			createdAt: row.createdAt,
+			updatedAt: row.updatedAt,
+			series: JSON.parse(row.series).map((col: any) => ({
+				...col,
+				createdAt: col.createdAt,
+			})),
+			bookmark: row.bookmark_id
+				? {
+						id: row.bookmark_id,
+						userId: userId,
+						carId: row.id,
+						quantity: row.bookmark_quantity,
+						notes: row.bookmark_notes,
+						createdAt: row.bookmark_createdAt,
+						updatedAt: row.bookmark_updatedAt,
+					}
+				: undefined,
+		}));
+
+		const response = {
+			data: carsWithSeries,
+			meta: { page, limit, total },
+		};
+
+		// -- cache the response
+		await this.cache.set(cacheKey, response, 300); // Cache for 5 minutes
+		return response;
 	}
 
 	async paginateByCollectionId(

@@ -16,7 +16,12 @@ export const adminMiddleware = createMiddleware(
 			if (!session) {
 				throw new Error("Unauthorized");
 			}
-			if (!session.user || session.user.email !== "phuongthephung@gmail.com") {
+			if (
+				!session.user ||
+				!["hi@phuongphung.com", "phuongthephung@gmail.com"].includes(
+					session.user.email,
+				)
+			) {
 				throw new Error("Unauthorized");
 			}
 			set("session", session);
