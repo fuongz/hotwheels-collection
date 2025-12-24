@@ -152,7 +152,7 @@ export function CarCard({ car, onSaved, hideOwnedBadge }: CarCardProps) {
 							Save to collection
 						</Button>
 					) : (
-						<Badge variant="purple">
+						<Badge>
 							<HugeiconsIcon
 								icon={BookmarkCheck02Icon}
 								className="size-4"

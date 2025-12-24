@@ -73,7 +73,7 @@ export function CollectionFilters({
 	const years = Array.from({ length: 12 }, (_, i) => (2015 + i).toString());
 
 	return (
-		<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4 bg-card/90 backdrop-blur-sm">
+		<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 py-4">
 			<div className="flex items-center gap-3 sm:gap-4">
 				{/* Year Filter */}
 				{!hideYearFilter && (

@@ -46,7 +46,7 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 	const [q, setQ] = useQueryState("q", parseAsString);
 	const [gridColumns, setGridColumns] = useQueryState(
 		"cols",
-		parseAsInteger.withDefault(6),
+		parseAsInteger.withDefault(4),
 	);
 	const limit = 24;
 
@@ -122,7 +122,7 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 			</div>
 
 			{/* Filters Section */}
-			<section className="sticky top-10 z-1">
+			<section className="sticky bg-background top-10 z-1">
 				<CollectionFilters
 					year={null}
 					sortBy={sortBy}
