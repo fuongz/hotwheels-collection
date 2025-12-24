@@ -64,6 +64,13 @@
       "when": 1766404146063,
       "tag": "0008_green_madame_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1766554986662,
+      "tag": "0009_cute_hobgoblin",
+      "breakpoints": true
     }
   ]
 }
