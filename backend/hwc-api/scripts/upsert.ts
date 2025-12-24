@@ -2,8 +2,8 @@ import { DrizzleD1Database } from "drizzle-orm/d1";
 import { inArray } from "drizzle-orm";
 import { dbClient } from "../src/db/d1";
 import { CarsRepository } from "../src/db/d1/repositories/cars-repository";
-import { SeriesRepository } from "../src/db/d1/repositories/series_repository";
-import { CarSeriesRepository } from "../src/db/d1/repositories/car_series_repository";
+import { SeriesRepository } from "../src/db/d1/repositories/series-repository";
+import { CarSeriesRepository } from "../src/db/d1/repositories/car-series-repository";
 import { CacheService } from "../src/cache/kv/cache.service";
 import { cars, series, carSeries } from "../src/db/d1/schema";
 

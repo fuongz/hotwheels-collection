@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { auth } from "./auth";
-import { adminRoute } from "./routes/admin";
+
 // -- routes
+import { adminRoute } from "./routes/admin";
 import { carsRoute } from "./routes/cars";
 import { meRoute } from "./routes/me";
 import { seriesRoute } from "./routes/series";
+
 // -- types
 import type { App } from "./types";
 
