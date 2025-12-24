@@ -3,7 +3,9 @@
 import {
 	CleanIcon,
 	FilterVerticalIcon,
+	GridViewIcon,
 	Layout01Icon,
+	ListViewIcon,
 	Search01Icon,
 	Sorting01Icon,
 	SortingAZ02Icon,
@@ -41,12 +43,15 @@ interface CollectionFiltersProps {
 	search: string | null;
 	searchLoading?: boolean;
 	gridColumns: number;
+	view?: "list" | "series";
 	onYearChange: (value: string | null) => void;
 	onSortByChange: (value: string | null) => void;
 	onSortOrderChange: (value: string | null) => void;
 	onSearchChange: (value: string | null) => void;
 	onGridColumnsChange: (value: number) => void;
+	onViewChange?: (value: "series" | "list") => void;
 	hideYearFilter?: boolean;
+	showViewToggle?: boolean;
 }
 
 export function CollectionFilters({
@@ -56,12 +61,15 @@ export function CollectionFilters({
 	search,
 	searchLoading = false,
 	gridColumns,
+	view,
 	onYearChange,
 	onSortByChange,
 	onSortOrderChange,
 	onSearchChange,
 	onGridColumnsChange,
+	onViewChange,
 	hideYearFilter = false,
+	showViewToggle = false,
 }: CollectionFiltersProps) {
 	// Local state for immediate input updates
 	const [searchInput, setSearchInput] = useState(search || "");
@@ -193,6 +201,46 @@ export function CollectionFilters({
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</TooltipProvider>
+
+				{/* View Change Button */}
+				{showViewToggle && (
+					<TooltipProvider>
+						<DropdownMenu>
+							<Tooltip>
+								<TooltipTrigger
+									render={
+										<DropdownMenuTrigger
+											render={
+												<Button variant="outline" className="cursor-pointer" />
+											}
+										/>
+									}
+								>
+									<HugeiconsIcon
+										icon={view === "list" ? ListViewIcon : GridViewIcon}
+									/>
+									{view}
+									<span className="sr-only">change view</span>
+								</TooltipTrigger>
+								<TooltipContent>
+									<p>change view</p>
+								</TooltipContent>
+							</Tooltip>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem onClick={() => onViewChange?.("list")}>
+									<span className={view === "list" ? "font-semibold" : ""}>
+										list
+									</span>
+								</DropdownMenuItem>
+								<DropdownMenuItem onClick={() => onViewChange?.("series")}>
+									<span className={view === "series" ? "font-semibold" : ""}>
+										series
+									</span>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</TooltipProvider>
+				)}
 
 				<InputGroup className="relative w-full md:w-auto">
 					<InputGroupAddon></InputGroupAddon>

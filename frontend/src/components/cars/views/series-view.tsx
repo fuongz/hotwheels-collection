@@ -1,0 +1,110 @@
+import { useMemo } from "react";
+import { CarCard } from "@/components/car-card";
+import type { Car, Series } from "@/types/car";
+
+export function CarsSeriesView({
+	cars,
+	meta,
+	gridColumns,
+	onSaved,
+}: {
+	gridColumns?: number;
+	cars: Car[];
+	meta?: {
+		page: number;
+		limit: number;
+		total: number;
+	};
+	onSaved?: (car: Car) => void;
+}) {
+	// Group cars by series
+	const groupedCars = useMemo(() => {
+		const groups: Record<string, { series: Series; cars: Car[] }> = {};
+		cars.forEach((car) => {
+			if (car.series && car.series.length > 0) {
+				car.series.forEach((series) => {
+					if (!groups[series.id]) {
+						groups[series.id] = {
+							series,
+							cars: [],
+						};
+					}
+					groups[series.id].cars.push(car);
+				});
+			} else {
+				if (!groups.uncategorized) {
+					groups.uncategorized = {
+						series: {
+							id: "uncategorized",
+							name: "Uncategorized",
+							seriesNum: "0",
+							wikiSlug: null,
+							createdAt: "",
+							updatedAt: "",
+						},
+						cars: [],
+					};
+				}
+				groups.uncategorized.cars.push(car);
+			}
+		});
+		return Object.values(groups).sort((a, b) => {
+			return b.series.name.localeCompare(a.series.name);
+		});
+	}, [cars]);
+
+	return (
+		<>
+			{/* Results Info */}
+			<div className="flex items-center justify-between">
+				<p className="text-sm text-muted-foreground">
+					showing{" "}
+					<span className="font-medium text-foreground">{cars.length}</span> of{" "}
+					<span className="font-medium text-foreground">
+						{meta?.total || cars.length}
+					</span>{" "}
+					cars in{" "}
+					<span className="font-medium text-foreground">
+						{groupedCars.length}
+					</span>{" "}
+					{groupedCars.length === 1 ? "collection" : "collections"}
+				</p>
+			</div>
+
+			{/* Grouped Cars by Series/Collection */}
+			<div className="space-y-8">
+				{groupedCars.map((group) => (
+					<div key={group.series.id} className="space-y-4">
+						{/* Collection Header */}
+						<div className="flex items-center gap-3 pb-2 border-b border-border">
+							<h2 className="text-xl font-bold text-foreground">
+								{group.series.name}
+							</h2>
+						</div>
+
+						{/* Cars Grid */}
+						<div
+							className={`grid gap-4 ${
+								gridColumns === 3
+									? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
+									: gridColumns === 4
+										? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+										: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6"
+							}`}
+						>
+							{group.cars.map((car) => (
+								<CarCard
+									key={car.id}
+									car={car}
+									hideOwnedBadge
+									size="mini"
+									onSaved={() => onSaved?.(car)}
+								/>
+							))}
+						</div>
+					</div>
+				))}
+			</div>
+		</>
+	);
+}

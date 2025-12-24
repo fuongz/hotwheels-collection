@@ -9,7 +9,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
-import { CarCard } from "@/components/car-card";
+import { CarsListView } from "@/components/cars/views/list-view";
+import { CarsSeriesView } from "@/components/cars/views/series-view";
 import { CollectionFilters } from "@/components/collection-filters";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,9 +44,13 @@ function UserCarsPageContent() {
 	const [q, setQ] = useQueryState("q", parseAsString);
 	const [gridColumns, setGridColumns] = useQueryState(
 		"cols",
-		parseAsInteger.withDefault(4),
+		parseAsInteger.withDefault(6),
 	);
-	const limit = 24;
+	const [view, setView] = useQueryState(
+		"view",
+		parseAsString.withDefault("list"),
+	);
+	const limit = 100;
 
 	const {
 		data: response,
@@ -104,6 +109,7 @@ function UserCarsPageContent() {
 					search={q}
 					searchLoading={isLoading}
 					gridColumns={gridColumns}
+					view={view as "list" | "series"}
 					onYearChange={(value) => {
 						setYear(value);
 						setCurrentPage(1);
@@ -123,10 +129,13 @@ function UserCarsPageContent() {
 					onGridColumnsChange={(value) => {
 						setGridColumns(value);
 					}}
+					onViewChange={(value) => {
+						setView(value);
+					}}
+					showViewToggle
 				/>
 			</section>
 
-			{/* Main Content */}
 			<main className="space-y-8 mx-[1px]">
 				{/* Loading State */}
 				{isLoading && (
@@ -180,127 +189,102 @@ function UserCarsPageContent() {
 					</div>
 				)}
 
-				{/* Content - only show when not loading and no error */}
-				{!isLoading && !isError && carsData.length > 0 && (
-					<>
-						{/* Results Info */}
-						<div className="flex items-center justify-between">
-							<p className="text-sm text-muted-foreground">
-								showing{" "}
-								<span className="font-medium text-foreground">
-									{carsData.length}
-								</span>{" "}
-								of{" "}
-								<span className="font-medium text-foreground">
-									{meta?.total || carsData.length}
-								</span>{" "}
-								cars
-							</p>
-						</div>
+				{!isLoading &&
+					!isError &&
+					carsData.length > 0 &&
+					(view === "list" ? (
+						<CarsListView
+							gridColumns={gridColumns}
+							cars={carsData}
+							meta={meta}
+							onSaved={(_car) => mutate()}
+						/>
+					) : (
+						<CarsSeriesView
+							gridColumns={gridColumns}
+							cars={carsData}
+							meta={meta}
+							onSaved={(_car) => mutate()}
+						/>
+					))}
 
-						<div
-							className={`grid gap-4 ${
-								gridColumns === 3
-									? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
-									: gridColumns === 4
-										? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-										: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6"
-							}`}
-						>
-							{carsData.map((car) => (
-								<CarCard
-									key={car.id}
-									car={car}
-									hideOwnedBadge
-									onSaved={() => mutate()}
+				{/* Pagination */}
+				{totalPages > 1 && (
+					<Pagination className="mt-8">
+						<PaginationContent>
+							<PaginationItem>
+								<PaginationPrevious
+									href="#"
+									onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+										e.preventDefault();
+										if (currentPage > 1) {
+											setCurrentPage(currentPage - 1);
+										}
+									}}
+									className={
+										currentPage === 1 ? "pointer-events-none opacity-50" : ""
+									}
 								/>
-							))}
-						</div>
+							</PaginationItem>
 
-						{/* Pagination */}
-						{totalPages > 1 && (
-							<Pagination className="mt-8">
-								<PaginationContent>
-									<PaginationItem>
-										<PaginationPrevious
-											href="#"
-											onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
-												e.preventDefault();
-												if (currentPage > 1) {
-													setCurrentPage(currentPage - 1);
-												}
-											}}
-											className={
-												currentPage === 1
-													? "pointer-events-none opacity-50"
-													: ""
-											}
-										/>
-									</PaginationItem>
+							{/* Page Numbers */}
+							{Array.from({ length: totalPages }, (_, i) => i + 1).map(
+								(pageNum) => {
+									const isCurrentPage = pageNum === currentPage;
+									const showPage =
+										pageNum === 1 ||
+										pageNum === totalPages ||
+										(pageNum >= currentPage - 1 && pageNum <= currentPage + 1);
 
-									{/* Page Numbers */}
-									{Array.from({ length: totalPages }, (_, i) => i + 1).map(
-										(pageNum) => {
-											const isCurrentPage = pageNum === currentPage;
-											const showPage =
-												pageNum === 1 ||
-												pageNum === totalPages ||
-												(pageNum >= currentPage - 1 &&
-													pageNum <= currentPage + 1);
-
-											if (!showPage) {
-												if (
-													pageNum === currentPage - 2 ||
-													pageNum === currentPage + 2
-												) {
-													return (
-														<PaginationItem key={pageNum}>
-															<PaginationEllipsis />
-														</PaginationItem>
-													);
-												}
-												return null;
-											}
-
+									if (!showPage) {
+										if (
+											pageNum === currentPage - 2 ||
+											pageNum === currentPage + 2
+										) {
 											return (
 												<PaginationItem key={pageNum}>
-													<PaginationLink
-														href="#"
-														isActive={isCurrentPage}
-														onClick={(
-															e: React.MouseEvent<HTMLAnchorElement>,
-														) => {
-															e.preventDefault();
-															setCurrentPage(pageNum);
-														}}
-													>
-														{pageNum}
-													</PaginationLink>
+													<PaginationEllipsis />
 												</PaginationItem>
 											);
-										},
-									)}
+										}
+										return null;
+									}
 
-									<PaginationItem>
-										<PaginationNext
-											href="#"
-											onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
-												e.preventDefault();
-												if (currentPage < totalPages) {
-													setCurrentPage(currentPage + 1);
-												}
-											}}
-											className={
-												currentPage === totalPages
-													? "pointer-events-none opacity-50"
-													: ""
-											}
-										/>
-									</PaginationItem>
-								</PaginationContent>
-							</Pagination>
-						)}
-					</>
+									return (
+										<PaginationItem key={pageNum}>
+											<PaginationLink
+												href="#"
+												isActive={isCurrentPage}
+												onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+													e.preventDefault();
+													setCurrentPage(pageNum);
+												}}
+											>
+												{pageNum}
+											</PaginationLink>
+										</PaginationItem>
+									);
+								},
+							)}
+
+							<PaginationItem>
+								<PaginationNext
+									href="#"
+									onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+										e.preventDefault();
+										if (currentPage < totalPages) {
+											setCurrentPage(currentPage + 1);
+										}
+									}}
+									className={
+										currentPage === totalPages
+											? "pointer-events-none opacity-50"
+											: ""
+									}
+								/>
+							</PaginationItem>
+						</PaginationContent>
+					</Pagination>
 				)}
 			</main>
 		</div>

@@ -23,9 +23,15 @@ interface CarCardProps {
 	car: Car;
 	onSaved?: () => void;
 	hideOwnedBadge?: boolean;
+	size?: "full" | "mini";
 }
 
-export function CarCard({ car, onSaved, hideOwnedBadge }: CarCardProps) {
+export function CarCard({
+	car,
+	onSaved,
+	hideOwnedBadge,
+	size = "full",
+}: CarCardProps) {
 	const [isImageError, setIsImageError] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 	const { data: session } = useSession();
@@ -62,7 +68,7 @@ export function CarCard({ car, onSaved, hideOwnedBadge }: CarCardProps) {
 			<div className="relative aspect-[16/9] overflow-hidden">
 				{car.avatarUrl && !isImageError ? (
 					<Image
-						src={car.avatarUrl || "/placeholder.svg"}
+						src={car.avatarUrl}
 						alt={car.model}
 						fill
 						loading="eager"
@@ -100,40 +106,42 @@ export function CarCard({ car, onSaved, hideOwnedBadge }: CarCardProps) {
 					</Badge>
 				</div>
 			</div>
-			<CardContent
-				className={cn(
-					"px-4 relative",
-					(!session?.user || hideOwnedBadge) && "pb-4",
-					car.bookmark && "border-pink-200",
-				)}
-			>
-				<div className="space-y-2">
-					<h3 className="font-semibold text-sm text-foreground line-clamp-2 leading-relaxed">
-						{car.model}
-					</h3>
-					<div className="flex items-center justify-between">
-						<span className="text-xs text-muted-foreground">
-							#{car.toyCode}
-						</span>
+			{size === "full" && (
+				<CardContent
+					className={cn(
+						"px-4 relative",
+						(!session?.user || hideOwnedBadge) && "pb-4",
+						car.bookmark && "border-pink-200",
+					)}
+				>
+					<div className="space-y-2">
+						<h3 className="font-semibold text-sm text-foreground line-clamp-2 leading-relaxed">
+							{car.model}
+						</h3>
+						<div className="flex items-center justify-between">
+							<span className="text-xs text-muted-foreground">
+								#{car.toyCode}
+							</span>
+						</div>
+						<div className="flex items-center mt-2 flex-wrap gap-2">
+							{car.series?.map((s) => (
+								<Link href={`/collections/${s.id}`} key={s.id}>
+									<span
+										className={cn(
+											"dark:bg-orange-900/50 dark:hover:bg-orange-900 dark:text-orange-50",
+											"bg-orange-100 hover:bg-orange-200 text-orange-800",
+											"flex text-xs gap-2 items-center px-1.5 hover:underline cursor-pointer hover:scale-105 transition hover:transition py-0.5",
+										)}
+									>
+										<HugeiconsIcon icon={Folder01Icon} className="size-3" />
+										{s.name}
+									</span>
+								</Link>
+							))}
+						</div>
 					</div>
-					<div className="flex items-center mt-2 flex-wrap gap-2">
-						{car.series?.map((s) => (
-							<Link href={`/collections/${s.id}`} key={s.id}>
-								<span
-									className={cn(
-										"dark:bg-orange-900/50 dark:hover:bg-orange-900 dark:text-orange-50",
-										"bg-orange-100 hover:bg-orange-200 text-orange-800",
-										"flex text-xs gap-2 items-center px-1.5 hover:underline cursor-pointer hover:scale-105 transition hover:transition py-0.5",
-									)}
-								>
-									<HugeiconsIcon icon={Folder01Icon} className="size-3" />
-									{s.name}
-								</span>
-							</Link>
-						))}
-					</div>
-				</div>
-			</CardContent>
+				</CardContent>
+			)}
 
 			{session?.user && !hideOwnedBadge && (
 				<CardFooter className="py-2">
