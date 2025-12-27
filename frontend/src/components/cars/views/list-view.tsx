@@ -32,10 +32,10 @@ export function CarsListView({
 			<div
 				className={`grid gap-4 ${
 					gridColumns === 3
-						? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
+						? "grid-cols-2 sm:grid-cols-2 md:grid-cols-3"
 						: gridColumns === 4
-							? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-							: "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6"
+							? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+							: "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6"
 				}`}
 			>
 				{cars.map((car) => (

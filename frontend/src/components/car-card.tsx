@@ -171,21 +171,19 @@ export function CarCard({
 			{session?.user && !hideOwnedBadge && (
 				<CardFooter className="py-2">
 					{!car.bookmark ? (
-						<Button
-							size="xs"
-							variant="secondary"
-							onClick={handleSave}
-							disabled={isSaving}
-						>
+						<Button size="xs" onClick={handleSave} disabled={isSaving}>
 							<HugeiconsIcon
 								icon={BookmarkAdd01Icon}
 								className="size-4"
 								strokeWidth={2}
 							/>
-							Save to collection
+							<span className="hidden sm:block">Save</span>
 						</Button>
 					) : (
-						<Badge>
+						<Badge
+							variant="outline"
+							className="bg-purple-200 border-purple-300 text-purple-600 dark:bg-purple-950 dark:border-purple-950 dark:text-purple-50"
+						>
 							<HugeiconsIcon
 								icon={BookmarkCheck02Icon}
 								className="size-4"
