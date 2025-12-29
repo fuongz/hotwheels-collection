@@ -56,5 +56,20 @@
 			"store_id": "ef976ac39100478aba6557b43644d595",
 			"secret_name": "PHAKEAPPS_GOOGLE_CLIENT_SECRET"
 		},
+		{
+			"binding": "CLOUDINARY_API_KEY",
+			"store_id": "ef976ac39100478aba6557b43644d595",
+			"secret_name": "PHAKEAPPS_CLOUDINARY_API_KEY"
+		},
+		{
+			"binding": "CLOUDINARY_API_SECRET",
+			"store_id": "ef976ac39100478aba6557b43644d595",
+			"secret_name": "PHAKEAPPS_CLOUDINARY_API_SECRET"
+		},
+		{
+			"binding": "CLOUDINARY_CLOUD_NAME",
+			"store_id": "ef976ac39100478aba6557b43644d595",
+			"secret_name": "PHAKEAPPS_CLOUDINARY_CLOUD_NAME"
+		}
 	]
 }

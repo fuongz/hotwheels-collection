@@ -12,30 +12,43 @@ export class UserCarsRepository {
 
 	async findByUserIdAndCarId(
 		userId: string,
-		carId: string,
+		carVersionId: string,
 	): Promise<UserCar | undefined> {
 		return await this.db
 			.select()
 			.from(userCars)
-			.where(and(eq(userCars.userId, userId), eq(userCars.carId, carId)))
+			.where(
+				and(
+					eq(userCars.userId, userId),
+					eq(userCars.carVersionId, carVersionId),
+				),
+			)
 			.get();
 	}
 
 	async findByUserIdAndCarIds(
 		userId: string,
-		carIds: string[],
+		carVersionIds: string[],
 	): Promise<UserCar[]> {
 		return await this.db
 			.select()
 			.from(userCars)
-			.where(and(eq(userCars.userId, userId), inArray(userCars.carId, carIds)))
+			.where(
+				and(
+					eq(userCars.userId, userId),
+					inArray(userCars.carVersionId, carVersionIds),
+				),
+			)
 			.all();
 	}
 
 	async upsert(
 		data: Omit<NewUserCar, "id" | "createdAt" | "updatedAt">,
 	): Promise<UserCar> {
-		const existing = await this.findByUserIdAndCarId(data.userId, data.carId);
+		const existing = await this.findByUserIdAndCarId(
+			data.userId,
+			data.carVersionId,
+		);
 		if (existing) {
 			const [updated] = await this.db
 				.update(userCars)
@@ -52,10 +65,15 @@ export class UserCarsRepository {
 		return created;
 	}
 
-	async delete(userId: string, carId: string): Promise<void> {
+	async delete(userId: string, carVersionId: string): Promise<void> {
 		await this.db
 			.delete(userCars)
-			.where(and(eq(userCars.userId, userId), eq(userCars.carId, carId)));
+			.where(
+				and(
+					eq(userCars.userId, userId),
+					eq(userCars.carVersionId, carVersionId),
+				),
+			);
 	}
 
 	async findByUserId(userId: string): Promise<UserCar[]> {

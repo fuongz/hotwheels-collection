@@ -5,7 +5,7 @@ import { CarsRepository } from "../src/db/d1/repositories/cars-repository";
 import { SeriesRepository } from "../src/db/d1/repositories/series-repository";
 import { CarSeriesRepository } from "../src/db/d1/repositories/car-series-repository";
 import { CacheService } from "../src/cache/kv/cache.service";
-import { cars, series, carSeries } from "../src/db/d1/schema";
+import { carVersions, series, carSeries } from "../src/db/d1/schema";
 
 // -- helpers
 import { generatePhotoKey, uploadImageToR2 } from "../src/storages/r2";
@@ -171,16 +171,16 @@ class UpsertCars {
     // Bulk insert cars in batches to respect D1's 100 variable limit
     for (let i = 0; i < carsArray.length; i += BATCH_SIZE_CARS) {
       const batch = carsArray.slice(i, i + BATCH_SIZE_CARS);
-      await this.db.insert(cars)
+      await this.db.insert(carVersions)
         .values(batch)
         .onConflictDoUpdate({
-          target: cars.toyCode,
+          target: carVersions.toyCode,
           set: {
-            toyIndex: cars.toyIndex,
-            model: cars.model,
-            wikiSlug: cars.wikiSlug,
-            avatarUrl: cars.avatarUrl,
-            year: cars.year,
+            toyIndex: carVersions.toyIndex,
+            model: carVersions.model,
+            wikiSlug: carVersions.wikiSlug,
+            avatarUrl: carVersions.avatarUrl,
+            year: carVersions.year,
             updatedAt: new Date()
           }
         });
@@ -195,8 +195,8 @@ class UpsertCars {
       const batch = toyCodes.slice(i, i + BATCH_SIZE_QUERY);
       const batchCars = await this.db
         .select()
-        .from(cars)
-        .where(inArray(cars.toyCode, batch))
+        .from(carVersions)
+        .where(inArray(carVersions.toyCode, batch))
         .all();
 
       for (const car of batchCars) {
@@ -227,14 +227,14 @@ class UpsertCars {
 
     // Build car-series relationships array
     const carSeriesArray: Array<{
-      carId: string;
+      carVersionId: string;
       seriesId: string;
       index: number;
     }> = [];
 
     for (const item of items) {
-      const carId = carsMap.get(item.toy_num);
-      if (!carId) continue;
+      const carVersionId = carsMap.get(item.toy_num);
+      if (!carVersionId) continue;
 
       // Parse series_num: "123/456" -> index=123, total=456
       const seriesNumParts = item.series_num.split("/");
@@ -245,7 +245,7 @@ class UpsertCars {
         if (!seriesId) continue;
 
         carSeriesArray.push({
-          carId,
+          carVersionId,
           seriesId,
           index: Number.parseInt(carIndex, 10) || 0
         });
@@ -264,7 +264,7 @@ class UpsertCars {
         const batch = carIds.slice(i, i + BATCH_SIZE_QUERY);
         await this.db
           .delete(carSeries)
-          .where(inArray(carSeries.carId, batch))
+          .where(inArray(carSeries.carVersionId, batch))
           .execute();
       }
       console.log(`----> LOG [Bulk] Deleted existing car-series relationships for ${carIds.length} cars`);

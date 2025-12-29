@@ -1,20 +1,25 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { CacheService } from "../../../cache/kv/cache.service";
-import { StorageService } from "../../../storages/r2";
+import { FandomProvider, generateSlug } from "../../../providers/fandom";
+import {
+	CloudinaryClient,
+	createCloudinaryClient,
+} from "../../../storages/cloudinary";
+import { generatePhotoKey, StorageService } from "../../../storages/r2";
 import { dbClient } from "..";
 import {
-	type Car,
+	type CarVersion,
 	carSeries,
-	cars,
-	type NewCar,
+	carVersions,
+	type NewCarVersion,
 	type Series,
 	series,
 	type UserCar,
 	userCars,
 } from "../schema";
 
-type CarWithSeries = Partial<Car> & {
+type CarWithSeries = Partial<CarVersion> & {
 	series: Partial<Series>[];
 	bookmark?: Partial<UserCar>;
 };
@@ -23,11 +28,21 @@ export class CarsRepository {
 	private db: DrizzleD1Database;
 	private cache: CacheService;
 	private storage: StorageService;
+	private cloudinary: CloudinaryClient | null = null;
+	private env: CloudflareBindings;
 
 	constructor(env: CloudflareBindings) {
+		this.env = env;
 		this.db = dbClient(env.DB);
 		this.cache = new CacheService(env.KV);
 		this.storage = new StorageService(env);
+	}
+
+	private async getCloudinaryClient(): Promise<CloudinaryClient> {
+		if (!this.cloudinary) {
+			this.cloudinary = await createCloudinaryClient(this.env);
+		}
+		return this.cloudinary;
 	}
 
 	private buildCarsWithSeriesQuery() {
@@ -58,8 +73,8 @@ SELECT
 		) FILTER (WHERE col.id IS NOT NULL),
 		json_array()
 	) as series
-FROM ${cars} c
-LEFT JOIN ${carSeries} cc ON c.id = cc.car_id
+FROM ${carVersions} c
+LEFT JOIN ${carSeries} cc ON c.id = cc.car_version_id
 LEFT JOIN ${series} col ON cc.series_id = col.id`;
 	}
 
@@ -81,26 +96,29 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 	}
 
 	async upsert(
-		data: Omit<NewCar, "id" | "createdAt" | "updatedAt">,
-	): Promise<Car> {
+		data: Omit<NewCarVersion, "id" | "createdAt" | "updatedAt">,
+	): Promise<CarVersion> {
 		const existing = await this.db
 			.select()
-			.from(cars)
-			.where(eq(cars.toyCode, data.toyCode))
+			.from(carVersions)
+			.where(eq(carVersions.toyCode, data.toyCode))
 			.get();
 
 		if (existing) {
 			const [updated] = await this.db
-				.update(cars)
+				.update(carVersions)
 				.set({
 					...data,
 					updatedAt: new Date(),
 				})
-				.where(eq(cars.id, existing.id))
+				.where(eq(carVersions.id, existing.id))
 				.returning();
 			return updated;
 		}
-		const [created] = await this.db.insert(cars).values(data).returning();
+		const [created] = await this.db
+			.insert(carVersions)
+			.values(data)
+			.returning();
 		return created;
 	}
 
@@ -125,12 +143,12 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 		}
 
 		// -- extract car IDs from the response
-		const carIds = response.data
+		const carVersionIds = response.data
 			.map((car) => car.id)
 			.filter((id): id is string => id !== undefined);
 
 		// -- if no valid car IDs, return response as-is
-		if (carIds.length === 0) {
+		if (carVersionIds.length === 0) {
 			return response;
 		}
 
@@ -138,12 +156,17 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 		const bookmarks = await this.db
 			.select()
 			.from(userCars)
-			.where(and(eq(userCars.userId, userId), inArray(userCars.carId, carIds)))
+			.where(
+				and(
+					eq(userCars.userId, userId),
+					inArray(userCars.carVersionId, carVersionIds),
+				),
+			)
 			.all();
 
-		// -- create a map for quick lookup: carId -> UserCar
+		// -- create a map for quick lookup: carVersionId -> UserCar
 		const bookmarkMap = new Map(
-			bookmarks.map((bookmark) => [bookmark.carId, bookmark]),
+			bookmarks.map((bookmark) => [bookmark.carVersionId, bookmark]),
 		);
 
 		// -- attach bookmarks to each car
@@ -231,7 +254,7 @@ WHERE uc.user_id = ${userId}`;
 			let countQuery = sql`
 SELECT COUNT(uc.id) as total
 FROM ${userCars} uc
-INNER JOIN ${cars} c ON uc.car_id = c.id`;
+INNER JOIN ${carVersions} c ON uc.car_version_id = c.id`;
 			countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
 			const countResult = await this.db.run(countQuery);
 			total = (countResult.results[0] as any)?.total || 0;
@@ -284,8 +307,8 @@ SELECT
 		json_array()
 	) as series
 FROM ${userCars} uc
-INNER JOIN ${cars} c ON uc.car_id = c.id
-LEFT JOIN ${carSeries} cc ON c.id = cc.car_id
+INNER JOIN ${carVersions} c ON uc.car_version_id = c.id
+LEFT JOIN ${carSeries} cc ON c.id = cc.car_version_id
 LEFT JOIN ${series} col ON cc.series_id = col.id`;
 
 		// -- apply conditions
@@ -341,7 +364,7 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 				? {
 						id: row.bookmark_id,
 						userId: userId,
-						carId: row.id,
+						carVersionId: row.id,
 						quantity: row.bookmark_quantity,
 						notes: row.bookmark_notes,
 						createdAt: row.bookmark_createdAt,
@@ -424,8 +447,8 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 				// -- fetch and cache total count for this collection
 				const countQuery = sql`
 SELECT COUNT(c.id) as total
-FROM ${cars} c
-LEFT JOIN ${carSeries} cc ON c.id = cc.car_id
+FROM ${carVersions} c
+LEFT JOIN ${carSeries} cc ON c.id = cc.car_version_id
 WHERE cc.series_id = ${collectionId}`;
 				const countResult = await this.db.run(countQuery);
 				total = (countResult.results[0] as any)?.total || 0;
@@ -435,8 +458,8 @@ WHERE cc.series_id = ${collectionId}`;
 			// -- with filters, always query the count
 			let countQuery = sql`
 SELECT COUNT(c.id) as total
-FROM ${cars} c
-LEFT JOIN ${carSeries} cc ON c.id = cc.car_id`;
+FROM ${carVersions} c
+LEFT JOIN ${carSeries} cc ON c.id = cc.car_version_id`;
 			countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
 			const countResult = await this.db.run(countQuery);
 			total = (countResult.results[0] as any)?.total || 0;
@@ -538,14 +561,14 @@ LEFT JOIN ${carSeries} cc ON c.id = cc.car_id`;
 				total = cachedTotal;
 			} else {
 				// -- fetch and cache total count
-				const countQuery = sql`SELECT COUNT(c.id) as total FROM ${cars} c`;
+				const countQuery = sql`SELECT COUNT(c.id) as total FROM ${carVersions} c`;
 				const countResult = await this.db.run(countQuery);
 				total = (countResult.results[0] as any)?.total || 0;
 				await this.cache.set("cars:total:count", total, 86_400 * 30); // Cache for 1 day
 			}
 		} else {
 			// -- with filters, always query the count
-			let countQuery = sql`SELECT COUNT(c.id) as total FROM ${cars} c`;
+			let countQuery = sql`SELECT COUNT(c.id) as total FROM ${carVersions} c`;
 			countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
 			const countResult = await this.db.run(countQuery);
 			total = (countResult.results[0] as any)?.total || 0;
@@ -591,33 +614,150 @@ LEFT JOIN ${carSeries} cc ON c.id = cc.car_id`;
 		return this.responseWithBookmarks(response, userId);
 	}
 
-	async removeImage(carId: string): Promise<Car> {
-		// Get the car to check if it has an avatar
+	async uploadImage(
+		carVersionId: string,
+		image: {
+			buffer: number[] | ArrayBuffer;
+			filename: string;
+			contentType: string;
+		},
+	): Promise<CarVersion> {
+		// -- get the car to generate proper photo key
 		const car = await this.db
 			.select()
-			.from(cars)
-			.where(eq(cars.id, carId))
+			.from(carVersions)
+			.where(eq(carVersions.id, carVersionId))
 			.get();
 
 		if (!car) {
-			throw new Error(`Car with id ${carId} not found`);
+			throw new Error(`Car with id ${carVersionId} not found`);
 		}
 
-		// If car has an avatarUrl with r2:// prefix, delete from R2
-		if (car.avatarUrl?.startsWith("r2://")) {
-			await this.storage.removeObject(car.avatarUrl);
+		// -- if car already has an avatarUrl, delete the old image from both storages
+		if (car.avatarUrl) {
+			if (car.avatarUrl.startsWith("r2://")) {
+				await this.storage.removeObject(car.avatarUrl);
+			} else if (car.avatarUrl.includes("cloudinary.com")) {
+				// Extract public_id from Cloudinary URL and delete
+				const cloudinaryClient = await this.getCloudinaryClient();
+				const match = car.avatarUrl.match(
+					/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/,
+				);
+				if (match) {
+					await cloudinaryClient.deleteImage(match[1]);
+				}
+			}
 		}
 
-		// Update the car to set avatarUrl to null
+		// -- convert buffer from number array to ArrayBuffer if needed
+		const imageBuffer = Array.isArray(image.buffer)
+			? new Uint8Array(image.buffer).buffer
+			: image.buffer;
+
+		// -- generate photo key using car details and original filename
+		const photoKey = generatePhotoKey(
+			car.toyCode,
+			car.year.toString(),
+			0,
+			image.filename,
+		);
+
+		// -- upload image to R2 for backup
+		await this.storage.uploadImageFromBinary(imageBuffer, photoKey);
+
+		// -- upload image to Cloudinary
+		const cloudinaryClient = await this.getCloudinaryClient();
+		const cloudinaryPublicId = CloudinaryClient.generatePhotoKey(
+			car.toyCode,
+			car.year.toString(),
+			0,
+		);
+
+		const cloudinaryResult = await cloudinaryClient.uploadImageFromBuffer(
+			imageBuffer,
+			{
+				public_id: cloudinaryPublicId,
+				folder: "cars",
+				overwrite: true,
+			},
+		);
+
+		// -- update the car with Cloudinary URL and updatedAt
 		const [updated] = await this.db
-			.update(cars)
+			.update(carVersions)
+			.set({
+				avatarUrl: cloudinaryResult.secure_url,
+				updatedAt: new Date(),
+			})
+			.where(eq(carVersions.id, carVersionId))
+			.returning();
+
+		return updated;
+	}
+
+	async removeImage(carVersionId: string): Promise<CarVersion> {
+		// -- get the car to check if it has an avatar
+		const car = await this.db
+			.select()
+			.from(carVersions)
+			.where(eq(carVersions.id, carVersionId))
+			.get();
+
+		if (!car) {
+			throw new Error(`Car with id ${carVersionId} not found`);
+		}
+
+		// -- if car has an avatarUrl, delete from storage
+		if (car.avatarUrl) {
+			if (car.avatarUrl.startsWith("r2://")) {
+				await this.storage.removeObject(car.avatarUrl);
+			} else if (car.avatarUrl.includes("cloudinary.com")) {
+				// Extract public_id from Cloudinary URL and delete
+				const cloudinaryClient = await this.getCloudinaryClient();
+				const match = car.avatarUrl.match(
+					/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/,
+				);
+				if (match) {
+					await cloudinaryClient.deleteImage(match[1]);
+				}
+			}
+		}
+
+		// -- update the car to set avatarUrl to null
+		const [updated] = await this.db
+			.update(carVersions)
 			.set({
 				avatarUrl: null,
 				updatedAt: new Date(),
 			})
-			.where(eq(cars.id, carId))
+			.where(eq(carVersions.id, carVersionId))
 			.returning();
 
 		return updated;
+	}
+
+	async sync(carVersionId: string): Promise<CarVersion> {
+		// -- get the car to check if it has an avatar
+		const car = await this.db
+			.select()
+			.from(carVersions)
+			.where(eq(carVersions.id, carVersionId))
+			.get();
+
+		if (!car) {
+			throw new Error(`Car with id ${carVersionId} not found`);
+		}
+
+		if (!car.wikiSlug && car.model.endsWith("(2nd Color)")) {
+			throw new Error(`This car currently does not support wiki syncing.`);
+		}
+
+		// -- wiki slug
+		const wikiSlug = car.wikiSlug ? car.wikiSlug : generateSlug(car.model);
+
+		const provider = new FandomProvider(this.env);
+		const wikiCar = await provider.getCar(wikiSlug);
+
+		return wikiCar;
 	}
 }

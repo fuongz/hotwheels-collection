@@ -20,7 +20,7 @@ export class CarSeriesRepository {
 			.from(carSeries)
 			.where(
 				and(
-					eq(carSeries.carId, data.carId),
+					eq(carSeries.carVersionId, data.carVersionId),
 					eq(carSeries.seriesId, data.seriesId),
 				),
 			)
@@ -41,11 +41,11 @@ export class CarSeriesRepository {
 		return await this.create(data);
 	}
 
-	async findByCarId(carId: string): Promise<CarSeries[]> {
+	async findByCarId(carVersionId: string): Promise<CarSeries[]> {
 		return await this.db
 			.select()
 			.from(carSeries)
-			.where(eq(carSeries.carId, carId))
+			.where(eq(carSeries.carVersionId, carVersionId))
 			.all();
 	}
 
@@ -61,18 +61,23 @@ export class CarSeriesRepository {
 		return await this.db.select().from(carSeries).all();
 	}
 
-	async deleteByCarId(carId: string): Promise<void> {
-		await this.db.delete(carSeries).where(eq(carSeries.carId, carId));
+	async deleteByCarId(carVersionId: string): Promise<void> {
+		await this.db
+			.delete(carSeries)
+			.where(eq(carSeries.carVersionId, carVersionId));
 	}
 
 	async deleteByCarAndSeries(
-		carId: string,
+		carVersionId: string,
 		seriesId: string,
 	): Promise<void> {
 		await this.db
 			.delete(carSeries)
 			.where(
-				and(eq(carSeries.carId, carId), eq(carSeries.seriesId, seriesId)),
+				and(
+					eq(carSeries.carVersionId, carVersionId),
+					eq(carSeries.seriesId, seriesId),
+				),
 			);
 	}
 }

@@ -22,18 +22,42 @@ export const series = sqliteTable("series", {
 		.notNull(),
 });
 
-export const cars = sqliteTable(
-	"cars",
+export const designers = sqliteTable("designers", {
+	id: text("id")
+		.primaryKey()
+		.$defaultFn(() => `designer_${nanoid()}`),
+	name: text("name").notNull().unique(),
+	wikiSlug: text("wiki_slug"),
+
+	tenureFrom: integer("tenure_from"),
+	tenureTo: integer("tenure_to"),
+
+	description: text("description"),
+
+	createdAt: integer("created_at", { mode: "timestamp" })
+		.$defaultFn(() => new Date())
+		.notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp" })
+		.$defaultFn(() => new Date())
+		.notNull(),
+});
+
+export const carVersions = sqliteTable(
+	"cars_versions",
 	{
 		id: text("id")
 			.primaryKey()
-			.$defaultFn(() => `car_${nanoid()}`),
+			.$defaultFn(() => `car_ver_${nanoid()}`),
+
 		toyCode: text("toy_code").notNull().unique(),
 		toyIndex: text("toy_index").notNull(),
+
 		model: text("model").notNull(),
 		wikiSlug: text("wiki_slug"),
 		avatarUrl: text("avatar_url"),
 		year: text("year").notNull(),
+
+		// -- timestamps
 		createdAt: integer("created_at", { mode: "timestamp" })
 			.$defaultFn(() => new Date())
 			.notNull(),
@@ -42,11 +66,11 @@ export const cars = sqliteTable(
 			.notNull(),
 	},
 	(table) => ({
-		yearIdx: index("cars_year_idx").on(table.year),
-		modelIdx: index("cars_model_idx").on(table.model),
-		updatedAtIdx: index("cars_updated_at_idx").on(table.updatedAt),
-		toyCodeIdx: index("cars_toy_code_idx").on(table.toyCode),
-		createdAtIdx: index("cars_created_at_idx").on(table.createdAt),
+		yearIdx: index("car_versions_year_idx").on(table.year),
+		modelIdx: index("car_versions_model_idx").on(table.model),
+		updatedAtIdx: index("car_versions_updated_at_idx").on(table.updatedAt),
+		toyCodeIdx: index("car_versions_toy_code_idx").on(table.toyCode),
+		createdAtIdx: index("car_versions_created_at_idx").on(table.createdAt),
 	}),
 );
 
@@ -56,9 +80,9 @@ export const carSeries = sqliteTable(
 		id: text("id")
 			.primaryKey()
 			.$defaultFn(() => `car_series_${nanoid()}`),
-		carId: text("car_id")
+		carVersionId: text("car_version_id")
 			.notNull()
-			.references(() => cars.id),
+			.references(() => carVersions.id),
 		seriesId: text("series_id")
 			.notNull()
 			.references(() => series.id),
@@ -71,10 +95,12 @@ export const carSeries = sqliteTable(
 			.notNull(),
 	},
 	(table) => ({
-		carIdIdx: index("car_series_car_id_idx").on(table.carId),
+		carVersionIdIdx: index("car_series_car_version_id_idx").on(
+			table.carVersionId,
+		),
 		seriesIdIdx: index("car_series_series_id_idx").on(table.seriesId),
 		carSeriesIdx: index("car_series_car_series_idx").on(
-			table.carId,
+			table.carVersionId,
 			table.seriesId,
 		),
 	}),
@@ -87,9 +113,9 @@ export const userCars = sqliteTable(
 			.primaryKey()
 			.$defaultFn(() => `user_car_${nanoid()}`),
 		userId: text("user_id").notNull(),
-		carId: text("car_id")
+		carVersionId: text("car_version_id")
 			.notNull()
-			.references(() => cars.id, { onDelete: "cascade" }),
+			.references(() => carVersions.id, { onDelete: "cascade" }),
 		quantity: integer("quantity").notNull().default(1),
 		notes: text("notes"),
 		createdAt: integer("created_at", { mode: "timestamp" })
@@ -101,20 +127,25 @@ export const userCars = sqliteTable(
 	},
 	(table) => ({
 		userIdIdx: index("user_cars_user_id_idx").on(table.userId),
-		carIdIdx: index("user_cars_car_id_idx").on(table.carId),
-		userCarIdx: index("user_cars_user_car_idx").on(table.userId, table.carId),
+		carVersionIdIdx: index("user_cars_car_version_id_idx").on(
+			table.carVersionId,
+		),
+		userCarIdx: index("user_cars_user_car_version_idx").on(
+			table.userId,
+			table.carVersionId,
+		),
 	}),
 );
 
 // -- relations
 export const seriesRelations = relations(series, ({ many }) => ({
-	cars: many(cars),
+	carVersions: many(carVersions),
 }));
 
 export const carSeriesRelations = relations(carSeries, ({ one }) => ({
-	car: one(cars, {
-		fields: [carSeries.carId],
-		references: [cars.id],
+	carVersion: one(carVersions, {
+		fields: [carSeries.carVersionId],
+		references: [carVersions.id],
 	}),
 	series: one(series, {
 		fields: [carSeries.seriesId],
@@ -122,23 +153,23 @@ export const carSeriesRelations = relations(carSeries, ({ one }) => ({
 	}),
 }));
 
-export const carRelations = relations(cars, ({ many }) => ({
+export const carRelations = relations(carVersions, ({ many }) => ({
 	series: many(carSeries),
 	userCars: many(userCars),
 }));
 
 export const userCarsRelations = relations(userCars, ({ one }) => ({
-	car: one(cars, {
-		fields: [userCars.carId],
-		references: [cars.id],
+	carVersion: one(carVersions, {
+		fields: [userCars.carVersionId],
+		references: [carVersions.id],
 	}),
 }));
 
 export type Series = typeof series.$inferSelect;
 export type NewSeries = typeof series.$inferInsert;
 
-export type Car = typeof cars.$inferSelect;
-export type NewCar = typeof cars.$inferInsert;
+export type CarVersion = typeof carVersions.$inferSelect;
+export type NewCarVersion = typeof carVersions.$inferInsert;
 
 export type CarSeries = typeof carSeries.$inferSelect;
 export type NewCarSeries = typeof carSeries.$inferInsert;

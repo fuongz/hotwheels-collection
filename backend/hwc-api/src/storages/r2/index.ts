@@ -14,10 +14,10 @@ async function convertToWebP(imageBuffer: ArrayBuffer): Promise<ArrayBuffer> {
 	try {
 		// Use Cloudflare's native image processing
 		// Create a new Response with the image
-		const image = new Response(imageBuffer);
+		const _image = new Response(imageBuffer);
 
 		// Create a new Request to trigger image transformation
-		const request = new Request("https://example.com/image", {
+		const _request = new Request("https://example.com/image", {
 			cf: {
 				image: {
 					format: "webp",
@@ -107,6 +107,33 @@ export class StorageService {
 
 	constructor(env: CloudflareBindings) {
 		this.bucket = r2Client(env, "BUCKET");
+	}
+
+	async uploadImageFromBinary(
+		imageBuffer: ArrayBuffer,
+		key: string,
+	): Promise<string> {
+		if (!this.bucket) throw new Error("Storage not found");
+		try {
+			// Convert to WebP format
+			const webpBuffer = await convertToWebP(imageBuffer);
+
+			// Upload to R2 with WebP content type
+			await this.bucket.put(key, webpBuffer, {
+				httpMetadata: {
+					contentType: "image/webp",
+				},
+			});
+
+			console.log(`----> LOG [R2] Uploaded image to R2: ${key}`);
+			return `r2://${key}`;
+		} catch (error) {
+			console.error(
+				`----> ERROR [R2] Failed to upload image to R2: ${key}`,
+				error,
+			);
+			throw error;
+		}
 	}
 
 	async removeObject(key: string) {

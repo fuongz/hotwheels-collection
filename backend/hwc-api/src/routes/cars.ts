@@ -64,7 +64,7 @@ app.get(
 // - AUTHENTICATED
 // ----------------------------------------------------------------------------
 app.post(
-	"/:carId/save",
+	"/:carVersionId/save",
 	authMiddleware,
 	zValidator(
 		"json",
@@ -75,14 +75,14 @@ app.post(
 	),
 	async (c) => {
 		try {
-			const { carId } = c.req.param();
+			const { carVersionId } = c.req.param();
 			const body = c.req.valid("json");
 			const user = c.get("user");
 			const userCarsRepo = new UserCarsRepository(c.env);
 			const cacheService = new CacheService(c.env.KV);
 
 			// Two-layer duplicate check: KV cache first, then D1
-			const cacheKey = `user_car:${user.id}:${carId}`;
+			const cacheKey = `user_car:${user.id}:${carVersionId}`;
 
 			// Layer 1: Check KV cache
 			const cachedUserCar = await cacheService.get(cacheKey);
@@ -90,7 +90,7 @@ app.post(
 				// Found in cache - this is likely a duplicate attempt
 				const userCar = await userCarsRepo.upsert({
 					userId: user.id,
-					carId: carId,
+					carVersionId: carVersionId,
 					quantity: body.quantity,
 					notes: body.notes,
 				});
@@ -102,12 +102,15 @@ app.post(
 			}
 
 			// Layer 2: Check D1 database
-			const existing = await userCarsRepo.findByUserIdAndCarId(user.id, carId);
+			const existing = await userCarsRepo.findByUserIdAndCarId(
+				user.id,
+				carVersionId,
+			);
 			if (existing) {
 				// Found in database - update the record
 				const userCar = await userCarsRepo.upsert({
 					userId: user.id,
-					carId: carId,
+					carVersionId,
 					quantity: body.quantity,
 					notes: body.notes,
 				});
@@ -121,7 +124,7 @@ app.post(
 			// Not a duplicate - create new record
 			const userCar = await userCarsRepo.upsert({
 				userId: user.id,
-				carId: carId,
+				carVersionId,
 				quantity: body.quantity,
 				notes: body.notes,
 			});
@@ -154,5 +157,46 @@ app.post(
 		}
 	},
 );
+
+app.post(
+	"/:carId/upload-image",
+	adminMiddleware,
+	zValidator(
+		"json",
+		z.object({
+			buffer: z.array(z.number()).min(1),
+			filename: z.string(),
+			contentType: z.string(),
+		}),
+	),
+	async ({ env, req, json }) => {
+		try {
+			const { carId } = req.param();
+			const image = req.valid("json");
+			const carsRepo = new CarsRepository(env);
+			return json(
+				await carsRepo.uploadImage(carId, {
+					buffer: image.buffer,
+					filename: image.filename,
+					contentType: image.contentType,
+				}),
+			);
+		} catch (err: any) {
+			console.log(err);
+			return json({ error: err.message }, 500);
+		}
+	},
+);
+
+app.post("/:carId/sync", adminMiddleware, async ({ env, req, json }) => {
+	try {
+		const { carId } = req.param();
+		const carsRepo = new CarsRepository(env);
+		return json(await carsRepo.sync(carId));
+	} catch (err: any) {
+		console.log(err);
+		return json({ error: err.message }, 500);
+	}
+});
 
 export { app as carsRoute };
