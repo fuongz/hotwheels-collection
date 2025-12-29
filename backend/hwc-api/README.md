@@ -12,23 +12,44 @@
 1. `BETTER_AUTH_SECRET` - Secret key for better-auth
 
 ```bash
-bun wrangler secrets-store secret create ef976ac39100478aba6557b43644d595 --name HWC_BETTER_AUTH_SECRET --value <your-secret-key> --scopes workers --persist-to ./.wrangler/state
+bun local:secrets:create --name HWC_BETTER_AUTH_SECRET --value <your-secret-key>
 ```
 > Note: Update `<your-secret-key>` with your actual secret key. `ef976ac39100478aba6557b43644d595` is just an example for my reference.
 
 2. `GOOGLE_CLIENT_ID` - Client ID for Google OAuth2
 
 ```bash
-bun wrangler secrets-store secret create ef976ac39100478aba6557b43644d595 --name PHAKEAPPS_GOOGLE_CLIENT_ID --value <your-client-id> --scopes workers --persist-to ./.wrangler/state
+bun local:secrets:create --name PHAKEAPPS_GOOGLE_CLIENT_ID --value <your-client-id>
 ```
 > Note: Update `<your-client-id>` with your actual client ID. `ef976ac39100478aba6557b43644d595` is just an example for my reference.
 
 3. `GOOGLE_CLIENT_SECRET` - Client secret for Google OAuth2
 
 ```bash
-bun wrangler secrets-store secret create ef976ac39100478aba6557b43644d595 --name PHAKEAPPS_GOOGLE_CLIENT_SECRET --value <your-client-secret> --scopes workers --persist-to ./.wrangler/state
+bun local:secrets:create --name PHAKEAPPS_GOOGLE_CLIENT_SECRET --value <your-client-secret>
 ```
 > Note: Update `<your-client-secret>` with your actual secret key. `ef976ac39100478aba6557b43644d595` is just an example for my reference.
+
+4. `CLOUDINARY_API_KEY` - API key for Cloudinary
+
+```bash
+bun local:secrets:create --name PHAKEAPPS_CLOUDINARY_API_KEY --value <your-api-key>
+```
+> Note: Update `<your-api-key>` with your actual API key.
+
+5. `CLOUDINARY_API_SECRET` - API secret for Cloudinary
+
+```bash
+bun local:secrets:create --name PHAKEAPPS_CLOUDINARY_API_SECRET --value <your-api-secret>
+```
+> Note: Update `<your-api-secret>` with your actual API secret.
+
+6. `CLOUDINARY_CLOUD_NAME` - Cloud name for Cloudinary
+
+```bash
+bun local:secrets:create --name PHAKEAPPS_CLOUDINARY_CLOUD_NAME --value <your-cloud-name>
+```
+> Note: Update `<your-cloud-name>` with your actual cloud name.
 
 ## Commands
 
@@ -36,10 +57,12 @@ bun wrangler secrets-store secret create ef976ac39100478aba6557b43644d595 --name
 |---------|-------------|
 | `bun run dev` | Run the server in development mode |
 | `bun run deploy` | Deploy the server to Cloudflare Workers |
+| `bun run cf-typegen` | Generate TypeScript types for Cloudflare bindings |
 | `bun run db:migrate` | Run database migrations |
 | `bun run db:studio` | Run database studio |
 | `bun run db:generate` | Generate database schema |
 | `bun run auth:generate` | Generate better-auth schemas |
+| `bun run local:secrets:create` | Create local secrets for development |
 
 ## Cache Strategy
 
