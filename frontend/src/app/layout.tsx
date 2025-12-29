@@ -3,6 +3,7 @@ import { Space_Grotesk } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import type React from "react";
 import "./globals.css";
+import "react-photo-view/dist/react-photo-view.css";
 import { AuthProvider } from "@/components/auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";

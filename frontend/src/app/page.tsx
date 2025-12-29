@@ -4,8 +4,8 @@ import { CryingIcon, Fire02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { Suspense, useMemo } from "react";
+import { CollectionFilters } from "@/components/cars/actions/collection-filters";
 import { CarsListView } from "@/components/cars/views/list-view";
-import { CollectionFilters } from "@/components/collection-filters";
 import {
 	Pagination,
 	PaginationContent,

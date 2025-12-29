@@ -3,16 +3,29 @@
 import {
 	BookmarkAdd01Icon,
 	BookmarkCheck02Icon,
+	DatabaseSync01Icon,
 	Folder01Icon,
 	ImageDownload02Icon,
 	ImageNotFound01Icon,
+	ImageUploadIcon,
 	MoreHorizontalFreeIcons,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { PhotoView } from "react-photo-view";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -26,6 +39,7 @@ import { api } from "@/lib/api-client";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import type { Car } from "@/types/car";
+import { DialogUploadImage } from "./dialog-upload-image";
 
 interface CarCardProps {
 	car: Car;
@@ -42,6 +56,10 @@ export function CarCard({
 }: CarCardProps) {
 	const [isImageError, setIsImageError] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
+	const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+	const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
+	const [isRemoveImageDialogOpen, setIsRemoveImageDialogOpen] = useState(false);
+
 	const { data: session } = useSession();
 
 	const handleSave = async () => {
@@ -65,11 +83,22 @@ export function CarCard({
 		});
 	};
 
+	const handleSyncData = async () => {
+		setIsSyncDialogOpen(false);
+		toast.promise(api.post(`/cars/${car.id}/sync`), {
+			loading: "Syncing data...",
+			success: () => {
+				onSaved?.();
+				return "Data synced successfully";
+			},
+			error: () => {
+				return "Failed to sync data";
+			},
+		});
+	};
+
 	const handleRemoveImage = async () => {
-		if (!session?.user || session.user.role !== "admin") {
-			toast.error("You must be an admin to remove an image");
-			return;
-		}
+		setIsRemoveImageDialogOpen(false);
 		toast.promise(api.post(`/cars/${car.id}/remove-image`), {
 			loading: "Removing image...",
 			success: () => {
@@ -86,20 +115,21 @@ export function CarCard({
 		<Card
 			className={cn(
 				"group overflow-hidden transition-all p-0",
-				car.bookmark &&
-					"bg-gradient-to-br from-purple-200 to-pink-50 dark:from-purple-950 dark:to-pink-950 ring-2 ring-purple-200",
+				car.bookmark && "ring-2 ring-indigo-200 bg-indigo-50",
 			)}
 		>
 			<div className="relative aspect-[16/9] overflow-hidden">
 				{car.avatarUrl && !isImageError ? (
-					<Image
-						src={car.avatarUrl}
-						alt={car.model}
-						fill
-						loading="eager"
-						onError={() => setIsImageError(true)}
-						className={`h-full w-full object-cover hover:scale-105 duration-300 transition-all`}
-					/>
+					<PhotoView src={car.avatarUrl}>
+						<Image
+							src={car.avatarUrl}
+							alt={car.model}
+							fill
+							loading="eager"
+							onError={() => setIsImageError(true)}
+							className={`h-full w-full object-cover hover:scale-105 duration-300 transition-all cursor-pointer`}
+						/>
+					</PhotoView>
 				) : (
 					<div className="bg-muted text-xs w-full h-full flex items-center flex-col gap-2 justify-center">
 						<HugeiconsIcon
@@ -121,7 +151,6 @@ export function CarCard({
 						{car.year}
 					</Badge>
 				</div>
-
 				<div className="absolute top-3 right-3 flex items-center gap-2">
 					<Badge
 						variant="outline"
@@ -134,7 +163,7 @@ export function CarCard({
 			{size === "full" && (
 				<CardContent
 					className={cn(
-						"px-4 relative",
+						"px-4 relative flex-1",
 						(!session?.user || hideOwnedBadge) && "pb-4",
 						car.bookmark && "border-pink-200",
 					)}
@@ -169,7 +198,12 @@ export function CarCard({
 			)}
 
 			{session?.user && !hideOwnedBadge && (
-				<CardFooter className="py-2">
+				<CardFooter
+					className={cn(
+						"py-2 bg-transparent",
+						car.bookmark && "border-indigo-200 border-t-2 bg-indigo-50",
+					)}
+				>
 					{!car.bookmark ? (
 						<Button size="xs" onClick={handleSave} disabled={isSaving}>
 							<HugeiconsIcon
@@ -182,7 +216,7 @@ export function CarCard({
 					) : (
 						<Badge
 							variant="outline"
-							className="bg-purple-200 border-purple-300 text-purple-600 dark:bg-purple-950 dark:border-purple-950 dark:text-purple-50"
+							className="bg-indigo-200 border-indigo-300 text-indigo-600 dark:bg-indigo-950 dark:border-indigo-950 dark:text-indigo-50"
 						>
 							<HugeiconsIcon
 								icon={BookmarkCheck02Icon}
@@ -206,7 +240,17 @@ export function CarCard({
 									/>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end" className="w-40">
-									<DropdownMenuItem onClick={handleRemoveImage}>
+									<DropdownMenuItem onClick={() => setIsSyncDialogOpen(true)}>
+										<HugeiconsIcon
+											icon={DatabaseSync01Icon}
+											className="size-4 mr-2"
+											strokeWidth={2}
+										/>
+										Sync data
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => setIsRemoveImageDialogOpen(true)}
+									>
 										<HugeiconsIcon
 											icon={ImageNotFound01Icon}
 											className="size-4 mr-2"
@@ -214,12 +258,70 @@ export function CarCard({
 										/>
 										Remove image
 									</DropdownMenuItem>
+									<DropdownMenuItem onClick={() => setIsUploadDialogOpen(true)}>
+										<HugeiconsIcon
+											icon={ImageUploadIcon}
+											className="size-4 mr-2"
+											strokeWidth={2}
+										/>
+										Upload image
+									</DropdownMenuItem>
 								</DropdownMenuContent>
 							</DropdownMenu>
 						</div>
 					)}
 				</CardFooter>
 			)}
+
+			<DialogUploadImage
+				open={isUploadDialogOpen}
+				setOpen={setIsUploadDialogOpen}
+				car={car}
+			/>
+
+			{/* Sync Data Confirmation Dialog */}
+			<AlertDialog open={isSyncDialogOpen} onOpenChange={setIsSyncDialogOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Sync Car Data</AlertDialogTitle>
+						<AlertDialogDescription>
+							Are you sure you want to sync the data for this car? This will
+							update the car information from the external source.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction onClick={handleSyncData}>
+							Sync Data
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Remove Image Confirmation Dialog */}
+			<AlertDialog
+				open={isRemoveImageDialogOpen}
+				onOpenChange={setIsRemoveImageDialogOpen}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Remove Car Image</AlertDialogTitle>
+						<AlertDialogDescription>
+							Are you sure you want to remove the image for this car? This
+							action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleRemoveImage}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							Remove Image
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</Card>
 	);
 }

@@ -4,9 +4,9 @@ import { CryingIcon, Fire02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
+import { CollectionFilters } from "@/components/cars/actions/collection-filters";
 import { CarsListView } from "@/components/cars/views/list-view";
 import { CarsSeriesView } from "@/components/cars/views/series-view";
-import { CollectionFilters } from "@/components/collection-filters";
 import {
 	Pagination,
 	PaginationContent,
@@ -42,7 +42,7 @@ function UserCarsPageContent() {
 	);
 	const [view, setView] = useQueryState(
 		"view",
-		parseAsString.withDefault("list"),
+		parseAsString.withDefault("series"),
 	);
 	const limit = 100;
 

@@ -26,16 +26,20 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Separator } from "./ui";
-import { Button } from "./ui/button";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
-import { Spinner } from "./ui/spinner";
+import { Separator } from "../../ui";
+import { Button } from "../../ui/button";
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
+} from "../../ui/input-group";
+import { Spinner } from "../../ui/spinner";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "./ui/tooltip";
+} from "../../ui/tooltip";
 
 interface CollectionFiltersProps {
 	year: string | null;

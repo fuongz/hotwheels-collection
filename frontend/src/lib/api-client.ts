@@ -79,4 +79,15 @@ export const api = {
 			error: response.ok ? null : response,
 		};
 	},
+
+	postFormData: async <T>(url: string, formData: FormData) => {
+		const response = await $api.post(url.startsWith("/") ? url.slice(1) : url, {
+			body: formData,
+			credentials: "include",
+		});
+		return {
+			data: await response.json<T>(),
+			error: response.ok ? null : response,
+		};
+	},
 };

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
-import { CarCard } from "@/components/car-card";
+import { PhotoProvider } from "react-photo-view";
+import { CarCard } from "@/components/cars/item/car-card";
 import { Separator } from "@/components/ui";
 import type { Car, Series } from "@/types/car";
 
@@ -56,7 +57,7 @@ export function CarsSeriesView({
 	}, [cars]);
 
 	return (
-		<>
+		<PhotoProvider>
 			{/* Results Info */}
 			<div className="flex items-center justify-between">
 				<p className="text-sm text-muted-foreground">
@@ -118,6 +119,6 @@ export function CarsSeriesView({
 					</div>
 				))}
 			</div>
-		</>
+		</PhotoProvider>
 	);
 }

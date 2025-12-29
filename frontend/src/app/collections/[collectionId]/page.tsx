@@ -5,8 +5,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { useParams } from "next/navigation";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
+import { CollectionFilters } from "@/components/cars/actions/collection-filters";
 import { CarsListView } from "@/components/cars/views/list-view";
-import { CollectionFilters } from "@/components/collection-filters";
 import {
 	Pagination,
 	PaginationContent,

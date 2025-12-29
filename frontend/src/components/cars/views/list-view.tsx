@@ -1,4 +1,5 @@
-import { CarCard } from "@/components/car-card";
+import { PhotoProvider } from "react-photo-view";
+import { CarCard } from "@/components/cars/item/car-card";
 import type { Car } from "@/types/car";
 
 export function CarsListView({
@@ -17,7 +18,7 @@ export function CarsListView({
 	onSaved?: (car: Car) => void;
 }) {
 	return (
-		<>
+		<PhotoProvider>
 			{/* Results Info */}
 			<div className="flex items-center justify-between">
 				<p className="text-sm text-muted-foreground">
@@ -42,6 +43,6 @@ export function CarsListView({
 					<CarCard key={car.id} car={car} onSaved={() => onSaved?.(car)} />
 				))}
 			</div>
-		</>
+		</PhotoProvider>
 	);
 }
