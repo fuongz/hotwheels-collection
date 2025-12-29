@@ -1,0 +1,26 @@
+type: http_request
+model: http_request
+id: rq_RhWELyRper
+createdAt: 2025-12-29T05:01:29.363236
+updatedAt: 2025-12-29T08:15:18.801516
+workspaceId: wk_DSxpsxrc7P
+folderId: fl_9TfQ9Xzcy7
+authentication: {}
+authenticationType: null
+body: {}
+bodyType: null
+description: ''
+headers:
+- enabled: true
+  name: Cookie
+  value: ${[ secure(value=b64'WUVOQ19lVUUwYXpOdVF3R3dBZldJS2hGdEhqTTkwZnJqTmNmcFJKaU53KzRCZzV5S1ltcWgydlpjMnlnOUhETzcxalp2T0VzRWRSWWpQU0x0cGZJVlBRPT0') ]}
+  id: jdnt6X0g9Y
+- enabled: true
+  name: ''
+  value: ''
+  id: aNTi0HtpW8
+method: POST
+name: Sync car data
+sortPriority: 0.001
+url: ${[ ROOT_URL ]}/v1/cars/car_58EytBHOpJ/sync
+urlParameters: []

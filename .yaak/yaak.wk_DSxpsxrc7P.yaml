@@ -1,0 +1,14 @@
+type: workspace
+model: workspace
+id: wk_DSxpsxrc7P
+createdAt: 2025-12-18T16:49:09.953927
+updatedAt: 2025-12-18T16:49:11.311355
+authentication: {}
+authenticationType: null
+description: ''
+headers: []
+name: HotWheels-Collection
+encryptionKeyChallenge: eUE0azNuQwEArSh5QlyZDMbGwQgCOBE1/HOK5U+eDTFqPRmfgqtfB8hZEYukgJiFWnYEkIi8r9aevh5PDHZqrfhkn8RUNDybzk8oUurvidG/diYdMewubun2WHWsDDDa6MQ=
+settingValidateCertificates: true
+settingFollowRedirects: true
+settingRequestTimeout: 0

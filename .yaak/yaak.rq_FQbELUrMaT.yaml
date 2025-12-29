@@ -1,0 +1,19 @@
+type: http_request
+model: http_request
+id: rq_FQbELUrMaT
+createdAt: 2025-12-29T07:33:28.458284
+updatedAt: 2025-12-29T07:33:37.938909
+workspaceId: wk_DSxpsxrc7P
+folderId: fl_9TfQ9Xzcy7
+authentication: {}
+authenticationType: null
+body:
+  text: ''
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: Get all cars in series
+sortPriority: 0.001
+url: ${[ ROOT_URL ]}/v1/series/series_IOIJEtiUqr
+urlParameters: []
