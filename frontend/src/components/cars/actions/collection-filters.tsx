@@ -111,7 +111,7 @@ export function CollectionFilters({
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="all">all years</SelectItem>
+									<SelectItem value="all">All years</SelectItem>
 									{years.map((y) => (
 										<SelectItem key={y} value={y}>
 											{y}
@@ -137,9 +137,9 @@ export function CollectionFilters({
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="name">name</SelectItem>
-							<SelectItem value="year">year</SelectItem>
-							<SelectItem value="createdAt">date added</SelectItem>
+							<SelectItem value="name">Name</SelectItem>
+							<SelectItem value="year">Year</SelectItem>
+							<SelectItem value="createdAt">Date added</SelectItem>
 						</SelectContent>
 					</Select>
 				</div>
@@ -160,8 +160,8 @@ export function CollectionFilters({
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="asc">ascending</SelectItem>
-							<SelectItem value="desc">descending</SelectItem>
+							<SelectItem value="asc">Ascending</SelectItem>
+							<SelectItem value="desc">Descending</SelectItem>
 						</SelectContent>
 					</Select>
 				</div>
@@ -185,10 +185,10 @@ export function CollectionFilters({
 								>
 									<HugeiconsIcon icon={Layout01Icon} />
 									{gridColumns} columns
-									<span className="sr-only">change layout</span>
+									<span className="sr-only">Change layout</span>
 								</TooltipTrigger>
 								<TooltipContent>
-									<p>change layout</p>
+									<p>Change layout</p>
 								</TooltipContent>
 							</Tooltip>
 							<DropdownMenuContent align="end">
@@ -230,21 +230,21 @@ export function CollectionFilters({
 										icon={view === "list" ? ListViewIcon : GridViewIcon}
 									/>
 									{view}
-									<span className="sr-only">change view</span>
+									<span className="sr-only">Change view</span>
 								</TooltipTrigger>
 								<TooltipContent>
-									<p>change view</p>
+									<p>Change view</p>
 								</TooltipContent>
 							</Tooltip>
 							<DropdownMenuContent align="end">
 								<DropdownMenuItem onClick={() => onViewChange?.("list")}>
 									<span className={view === "list" ? "font-semibold" : ""}>
-										list
+										List
 									</span>
 								</DropdownMenuItem>
 								<DropdownMenuItem onClick={() => onViewChange?.("series")}>
 									<span className={view === "series" ? "font-semibold" : ""}>
-										series
+										Series
 									</span>
 								</DropdownMenuItem>
 							</DropdownMenuContent>
@@ -256,7 +256,7 @@ export function CollectionFilters({
 					<InputGroupAddon></InputGroupAddon>
 					<InputGroupInput
 						type="text"
-						placeholder="search cars..."
+						placeholder="Search cars..."
 						value={searchInput}
 						onChange={(e) => setSearchInput(e.target.value)}
 						className="w-full xl:w-[250px] pl-8"
@@ -277,7 +277,7 @@ export function CollectionFilters({
 										}}
 									>
 										<HugeiconsIcon icon={CleanIcon} />
-										clear
+										Clear
 									</Button>
 								)}
 								<Button
@@ -286,7 +286,7 @@ export function CollectionFilters({
 									className="cursor-pointer"
 									onClick={() => onSearchChange(searchInput)}
 								>
-									<HugeiconsIcon icon={Search01Icon} /> search
+									<HugeiconsIcon icon={Search01Icon} /> Search
 								</Button>
 							</div>
 						)}

@@ -55,15 +55,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 								}
 							>
 								<HugeiconsIcon icon={GithubFreeIcons} />
-								<span>github</span>
+								<span>Github</span>
 							</Button>
 						</div>
 					</div>
 				</div>
 			</header>
 			{children}
-			<div className="sticky w-full bottom-2 flex justify-center rounded z-1">
-				<p className="text-xs bg-card/50 backdrop-blur-sm text-foreground px-2 py-1">
+			<div className="sticky w-full bottom-0 md:bottom-2 flex justify-center rounded z-1">
+				<p className="text-xs rounded bg-card/50 backdrop-blur-sm text-foreground px-2 py-1">
 					Built with{" "}
 					<HugeiconsIcon
 						icon={FavouriteIcon}

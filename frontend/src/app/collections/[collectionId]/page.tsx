@@ -64,33 +64,14 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 	const meta = response?.meta;
 	const isError = error;
 
-	// Transform API data to match the component's expected Car interface
-	const carsData: Car[] = useMemo(() => {
-		if (!apiCars) return [];
-		const cdnUrl = process.env.NEXT_PUBLIC_CDN_URL || "";
-		return apiCars.map((car: Car) => ({
-			...car,
-			avatarUrl: car.avatarUrl
-				? car.avatarUrl.startsWith("r2://")
-					? `${cdnUrl}${car.avatarUrl.replace("r2://", "/")}`
-					: car.avatarUrl.includes("/upload/v1767267756")
-						? car.avatarUrl.replace(
-								"/upload/v1767267756",
-								"upload/f_webp,c_fill,w_250,h_150/v1767267756",
-							)
-						: car.avatarUrl
-				: null,
-		}));
-	}, [apiCars]);
-
 	// Get series name from the first car's series data
 	const seriesName = useMemo(() => {
-		if (carsData.length > 0 && carsData[0].series?.length > 0) {
-			const series = carsData[0].series.find((s) => s.id === collectionId);
+		if (apiCars && apiCars.length > 0 && apiCars[0].series?.length > 0) {
+			const series = apiCars[0].series.find((s) => s.id === collectionId);
 			return series?.name;
 		}
 		return null;
-	}, [carsData, collectionId]);
+	}, [apiCars, collectionId]);
 
 	// Calculate total pages
 	const totalPages = meta ? Math.ceil(meta.total / meta.limit) : 1;
@@ -182,7 +163,7 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 				)}
 
 				{/* Empty State */}
-				{!isLoading && !isError && carsData.length === 0 && (
+				{!isLoading && !isError && apiCars?.length === 0 && (
 					<div className="text-center py-16">
 						<div className="p-4 rounded-full bg-muted inline-block mb-4">
 							<HugeiconsIcon
@@ -202,10 +183,10 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 				)}
 
 				{/* Content - only show when not loading and no error */}
-				{!isLoading && !isError && carsData.length > 0 && (
+				{!isLoading && !isError && apiCars && apiCars.length > 0 && (
 					<>
 						<CarsListView
-							cars={carsData}
+							cars={apiCars}
 							meta={meta}
 							gridColumns={gridColumns}
 							onSaved={(_car) => mutate()}

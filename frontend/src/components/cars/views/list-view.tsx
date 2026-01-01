@@ -22,7 +22,7 @@ export function CarsListView({
 			{/* Results Info */}
 			<div className="flex items-center justify-between">
 				<p className="text-sm text-muted-foreground">
-					showing{" "}
+					Showing{" "}
 					<span className="font-medium text-foreground">{cars.length}</span> of{" "}
 					<span className="font-medium text-foreground">
 						{meta?.total || cars.length}

@@ -69,7 +69,6 @@ export function DialogUploadImage({
 			toast.success("Image uploaded successfully");
 			setOpen(false);
 			setSelectedFile(null);
-			// biome-ignore lint/suspicious/noExplicitAny: no need
 		} catch (err: any) {
 			toast.error(`Failed to upload image ${err.message}`);
 		} finally {

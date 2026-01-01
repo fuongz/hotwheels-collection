@@ -3,7 +3,6 @@ import useSWR, { type SWRConfiguration } from "swr";
 import { swrFetcher } from "@/lib/api-client";
 import type { ApiResponse } from "@/types/api-client";
 
-// biome-ignore lint/suspicious/noExplicitAny: no need
 export function useApi<T = any>(
 	key: string | [string, object?] | null,
 	config?: SWRConfiguration<ApiResponse<T>>,

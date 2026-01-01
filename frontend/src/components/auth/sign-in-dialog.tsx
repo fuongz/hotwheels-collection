@@ -29,7 +29,6 @@ export function SignInDialog() {
 				provider: "google",
 				callbackURL: process.env.NEXT_PUBLIC_BASE_URL,
 			});
-			// biome-ignore lint/suspicious/noExplicitAny: no need
 		} catch (err: any) {
 			console.error(err);
 			setError(

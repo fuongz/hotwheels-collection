@@ -3,7 +3,7 @@
 import { CryingIcon, Fire02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
-import { Suspense, useMemo } from "react";
+import { Suspense } from "react";
 import { CollectionFilters } from "@/components/cars/actions/collection-filters";
 import { CarsListView } from "@/components/cars/views/list-view";
 import {
@@ -59,25 +59,6 @@ function CollectionPageContent() {
 	const apiCars = response?.data;
 	const meta = response?.meta;
 	const isError = error;
-
-	// Transform API data to match the component's expected Car interface
-	const carsData: Car[] = useMemo(() => {
-		if (!apiCars) return [];
-		const cdnUrl = process.env.NEXT_PUBLIC_CDN_URL || "";
-		return apiCars.map((car: Car) => ({
-			...car,
-			avatarUrl: car.avatarUrl
-				? car.avatarUrl.startsWith("r2://")
-					? `${cdnUrl}${car.avatarUrl.replace("r2://", "/")}`
-					: car.avatarUrl.includes("/upload/v1767267756")
-						? car.avatarUrl.replace(
-								"/upload/v1767267756",
-								"upload/f_webp,c_fill,w_250,h_150/v1767267756",
-							)
-						: car.avatarUrl
-				: null,
-		}));
-	}, [apiCars]);
 
 	// Calculate total pages
 	const totalPages = meta ? Math.ceil(meta.total / meta.limit) : 1;
@@ -152,7 +133,7 @@ function CollectionPageContent() {
 					)}
 
 					{/* Empty State */}
-					{!isLoading && !isError && carsData.length === 0 && (
+					{!isLoading && !isError && apiCars?.length === 0 && (
 						<div className="text-center py-16">
 							<div className="p-4 rounded-full bg-muted inline-block mb-4">
 								<HugeiconsIcon
@@ -172,10 +153,10 @@ function CollectionPageContent() {
 					)}
 
 					{/* Content - only show when not loading and no error */}
-					{!isLoading && !isError && carsData.length > 0 && (
+					{!isLoading && !isError && apiCars && apiCars?.length > 0 && (
 						<>
 							<CarsListView
-								cars={carsData}
+								cars={apiCars}
 								meta={meta}
 								gridColumns={gridColumns}
 								onSaved={(_car) => mutate()}

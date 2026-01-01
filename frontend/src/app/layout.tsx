@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import type React from "react";
-import "./globals.css";
+import "../styles/globals.css";
 import "react-photo-view/dist/react-photo-view.css";
 import { AuthProvider } from "@/components/auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-const fontSans = Space_Grotesk({
+const fontSans = IBM_Plex_Sans({
 	subsets: ["vietnamese", "latin"],
 	weight: ["400", "500", "600", "700"],
 	variable: "--font-sans",

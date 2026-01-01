@@ -3,17 +3,18 @@
 import {
 	BookmarkAdd01Icon,
 	BookmarkCheck02Icon,
+	ChevronDown,
 	DatabaseSync01Icon,
 	Folder01Icon,
 	ImageDownload02Icon,
 	ImageNotFound01Icon,
 	ImageUploadIcon,
-	MoreHorizontalFreeIcons,
+	SettingsIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PhotoView } from "react-photo-view";
 import { toast } from "sonner";
 import {
@@ -59,6 +60,23 @@ export function CarCard({
 	const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
 	const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 	const [isRemoveImageDialogOpen, setIsRemoveImageDialogOpen] = useState(false);
+
+	// --- memo
+	const isBookmarked = useMemo(() => car?.bookmark, [car]);
+	const carImage = useMemo(
+		() =>
+			car.avatarUrl
+				? car.avatarUrl.startsWith("r2://")
+					? `${process.env.NEXT_PUBLIC_CDN_URL}${car.avatarUrl.replace("r2://", "/")}`
+					: car.avatarUrl.includes("/upload/v1767267756")
+						? car.avatarUrl.replace(
+								"/upload/v1767267756",
+								"/upload/f_webp,c_fill,w_1000,h_800/v1767267756",
+							)
+						: car.avatarUrl
+				: null,
+		[car],
+	);
 
 	const { data: session } = useSession();
 
@@ -123,14 +141,14 @@ export function CarCard({
 		<Card
 			className={cn(
 				"group overflow-hidden transition-all p-0",
-				car.bookmark && "ring-2 ring-indigo-200 bg-indigo-50",
+				isBookmarked && "ring-2 ring-indigo-200 bg-indigo-50",
 			)}
 		>
 			<div className="relative aspect-[16/9] overflow-hidden">
-				{car.avatarUrl && !isImageError ? (
-					<PhotoView src={car.avatarUrl}>
+				{carImage && !isImageError ? (
+					<PhotoView src={carImage}>
 						<Image
-							src={car.avatarUrl}
+							src={carImage}
 							alt={car.model}
 							fill
 							loading="eager"
@@ -173,7 +191,7 @@ export function CarCard({
 					className={cn(
 						"px-4 relative flex-1",
 						(!session?.user || hideOwnedBadge) && "pb-4",
-						car.bookmark && "border-pink-200",
+						isBookmarked && "border-pink-200",
 					)}
 				>
 					<div className="space-y-2">
@@ -192,7 +210,7 @@ export function CarCard({
 										className={cn(
 											"dark:bg-orange-900/50 dark:hover:bg-orange-900 dark:text-orange-50",
 											"bg-orange-100 hover:bg-orange-200 text-orange-800",
-											"flex text-xs gap-2 items-center px-1.5 hover:underline cursor-pointer hover:scale-105 transition hover:transition py-0.5",
+											"flex rounded text-xs gap-2 items-center px-1.5 hover:underline cursor-pointer hover:scale-105 transition hover:transition py-0.5",
 										)}
 									>
 										<HugeiconsIcon icon={Folder01Icon} className="size-3" />
@@ -208,12 +226,12 @@ export function CarCard({
 			{session?.user && !hideOwnedBadge && (
 				<CardFooter
 					className={cn(
-						"py-2 bg-transparent",
-						car.bookmark && "border-indigo-200 border-t-2 bg-indigo-50",
+						"py-4 bg-transparent",
+						isBookmarked && "border-indigo-200 bg-indigo-50",
 					)}
 				>
-					{!car.bookmark ? (
-						<Button size="xs" onClick={handleSave} disabled={isSaving}>
+					{!isBookmarked ? (
+						<Button onClick={handleSave} disabled={isSaving}>
 							<HugeiconsIcon
 								icon={BookmarkAdd01Icon}
 								className="size-4"
@@ -239,13 +257,13 @@ export function CarCard({
 						<div className="ml-auto">
 							<DropdownMenu>
 								<DropdownMenuTrigger
-									render={<Button size="icon-xs" variant="secondary" />}
+									render={
+										<Button variant={isBookmarked ? "ghost" : "secondary"} />
+									}
 								>
-									<HugeiconsIcon
-										icon={MoreHorizontalFreeIcons}
-										className="size-4"
-										strokeWidth={2}
-									/>
+									<HugeiconsIcon icon={SettingsIcon} strokeWidth={2} />
+									Actions
+									<HugeiconsIcon icon={ChevronDown} strokeWidth={2} />
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end" className="w-40">
 									<DropdownMenuItem onClick={() => setIsSyncDialogOpen(true)}>
@@ -322,8 +340,8 @@ export function CarCard({
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction
+							variant="destructive"
 							onClick={handleRemoveImage}
-							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
 						>
 							Remove Image
 						</AlertDialogAction>
