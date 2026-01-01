@@ -84,6 +84,10 @@ export function CarCard({
 	};
 
 	const handleSyncData = async () => {
+		if (session?.user.role !== "admin") {
+			toast.error("You must be an admin to do this action");
+			return;
+		}
 		setIsSyncDialogOpen(false);
 		toast.promise(api.post(`/cars/${car.id}/sync`), {
 			loading: "Syncing data...",
@@ -98,6 +102,10 @@ export function CarCard({
 	};
 
 	const handleRemoveImage = async () => {
+		if (session?.user.role !== "admin") {
+			toast.error("You must be an admin to do this action");
+			return;
+		}
 		setIsRemoveImageDialogOpen(false);
 		toast.promise(api.post(`/cars/${car.id}/remove-image`), {
 			loading: "Removing image...",

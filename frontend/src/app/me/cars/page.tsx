@@ -74,7 +74,14 @@ function UserCarsPageContent() {
 		return apiCars.map((car: Car) => ({
 			...car,
 			avatarUrl: car.avatarUrl
-				? `${cdnUrl}${car.avatarUrl.replace("r2://", "/")}`
+				? car.avatarUrl.startsWith("r2://")
+					? `${cdnUrl}${car.avatarUrl.replace("r2://", "/")}`
+					: car.avatarUrl.includes("/upload/v1767267756")
+						? car.avatarUrl.replace(
+								"/upload/v1767267756",
+								"/upload/f_webp,c_fill,w_1000,h_800/v1767267756",
+							)
+						: car.avatarUrl
 				: null,
 		}));
 	}, [apiCars]);
