@@ -75,7 +75,7 @@ function UserCarsPageContent() {
 			<div className="container mx-auto px-4">
 				<div>
 					<h1 className="text-xl font-bold text-foreground mb-2">
-						Your Cars
+						My garage
 						{meta && (
 							<span className="ml-2 text-xs font-normal text-muted-foreground">
 								(

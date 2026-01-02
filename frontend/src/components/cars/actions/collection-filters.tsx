@@ -41,6 +41,31 @@ import {
 	TooltipTrigger,
 } from "../../ui/tooltip";
 
+// Constants for select options
+const YEAR_OPTIONS = {
+	ALL: "all",
+	START_YEAR: 2015,
+	YEAR_COUNT: 12,
+} as const;
+
+const SORT_BY_OPTIONS = [
+	{ value: "name", label: "Name" },
+	{ value: "year", label: "Year" },
+	{ value: "createdAt", label: "Date added" },
+] as const;
+
+const SORT_ORDER_OPTIONS = [
+	{ value: "asc", label: "Ascending" },
+	{ value: "desc", label: "Descending" },
+] as const;
+
+const GRID_COLUMN_OPTIONS = [3, 4, 6] as const;
+
+const VIEW_OPTIONS = [
+	{ value: "list" as const, label: "List" },
+	{ value: "series" as const, label: "Series" },
+] as const;
+
 interface CollectionFiltersProps {
 	year: string | null;
 	sortBy: string | null;
@@ -86,7 +111,9 @@ export function CollectionFilters({
 	useEffect(() => {
 		setSearchInput(search || "");
 	}, [search]);
-	const years = Array.from({ length: 12 }, (_, i) => (2015 + i).toString());
+	const years = Array.from({ length: YEAR_OPTIONS.YEAR_COUNT }, (_, i) =>
+		(YEAR_OPTIONS.START_YEAR + i).toString(),
+	);
 
 	return (
 		<div className="flex flex-col flex-wrap md:flex-row md:items-center md:justify-between gap-4 py-4">
@@ -99,19 +126,23 @@ export function CollectionFilters({
 								htmlFor="year-select"
 								className="hidden sm:inline-block text-sm text-muted-foreground whitespace-nowrap"
 							>
-								<HugeiconsIcon icon={FilterVerticalIcon} className="size-4" />
+								<HugeiconsIcon
+									icon={FilterVerticalIcon}
+									className="size-4 text-muted-foreground"
+								/>
 							</label>
 							<Select
-								value={year || "all"}
+								value={year || YEAR_OPTIONS.ALL}
 								onValueChange={(value) =>
-									onYearChange(value === "all" ? null : value)
+									onYearChange(value === YEAR_OPTIONS.ALL ? null : value)
 								}
 							>
 								<SelectTrigger id="year-select" className="w-full sm:w-[140px]">
+									<span className="text-muted-foreground mr-1">Year:</span>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="all">All years</SelectItem>
+									<SelectItem value={YEAR_OPTIONS.ALL}>All years</SelectItem>
 									{years.map((y) => (
 										<SelectItem key={y} value={y}>
 											{y}
@@ -126,27 +157,36 @@ export function CollectionFilters({
 
 				{/* Sort By */}
 				<div className="flex items-center gap-2">
-					<HugeiconsIcon icon={SortingAZ02Icon} className="size-4" />
+					<HugeiconsIcon
+						icon={SortingAZ02Icon}
+						className="size-4 text-muted-foreground"
+					/>
 					<Select
 						value={sortBy || "year"}
 						onValueChange={(value) =>
 							onSortByChange(value === "year" ? null : value)
 						}
 					>
-						<SelectTrigger id="sort-by-select" className="w-full sm:w-[140px]">
+						<SelectTrigger id="sort-by-select">
+							<span className="text-muted-foreground mr-1">Sort by:</span>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="name">Name</SelectItem>
-							<SelectItem value="year">Year</SelectItem>
-							<SelectItem value="createdAt">Date added</SelectItem>
+							{SORT_BY_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
 						</SelectContent>
 					</Select>
 				</div>
 
 				{/* Sort Order */}
 				<div className="flex items-center gap-2">
-					<HugeiconsIcon icon={Sorting01Icon} className="size-4" />
+					<HugeiconsIcon
+						icon={Sorting01Icon}
+						className="size-4 text-muted-foreground"
+					/>
 					<Select
 						value={sortOrder || "desc"}
 						onValueChange={(value) =>
@@ -157,11 +197,15 @@ export function CollectionFilters({
 							id="sort-order-select"
 							className="w-full sm:w-[140px]"
 						>
+							<span className="text-muted-foreground mr-1">Order:</span>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="asc">Ascending</SelectItem>
-							<SelectItem value="desc">Descending</SelectItem>
+							{SORT_ORDER_OPTIONS.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
 						</SelectContent>
 					</Select>
 				</div>
@@ -192,21 +236,18 @@ export function CollectionFilters({
 								</TooltipContent>
 							</Tooltip>
 							<DropdownMenuContent align="end">
-								<DropdownMenuItem onClick={() => onGridColumnsChange(3)}>
-									<span className={gridColumns === 3 ? "font-semibold" : ""}>
-										3 columns
-									</span>
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => onGridColumnsChange(4)}>
-									<span className={gridColumns === 4 ? "font-semibold" : ""}>
-										4 columns
-									</span>
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => onGridColumnsChange(6)}>
-									<span className={gridColumns === 6 ? "font-semibold" : ""}>
-										6 columns
-									</span>
-								</DropdownMenuItem>
+								{GRID_COLUMN_OPTIONS.map((columns) => (
+									<DropdownMenuItem
+										key={columns}
+										onClick={() => onGridColumnsChange(columns)}
+									>
+										<span
+											className={gridColumns === columns ? "font-semibold" : ""}
+										>
+											{columns} columns
+										</span>
+									</DropdownMenuItem>
+								))}
 							</DropdownMenuContent>
 						</DropdownMenu>
 					</TooltipProvider>
@@ -237,23 +278,27 @@ export function CollectionFilters({
 								</TooltipContent>
 							</Tooltip>
 							<DropdownMenuContent align="end">
-								<DropdownMenuItem onClick={() => onViewChange?.("list")}>
-									<span className={view === "list" ? "font-semibold" : ""}>
-										List
-									</span>
-								</DropdownMenuItem>
-								<DropdownMenuItem onClick={() => onViewChange?.("series")}>
-									<span className={view === "series" ? "font-semibold" : ""}>
-										Series
-									</span>
-								</DropdownMenuItem>
+								{VIEW_OPTIONS.map((option) => (
+									<DropdownMenuItem
+										key={option.value}
+										onClick={() => onViewChange?.(option.value)}
+									>
+										<span
+											className={view === option.value ? "font-semibold" : ""}
+										>
+											{option.label}
+										</span>
+									</DropdownMenuItem>
+								))}
 							</DropdownMenuContent>
 						</DropdownMenu>
 					</TooltipProvider>
 				)}
 
 				<InputGroup className="relative w-full md:w-auto">
-					<InputGroupAddon></InputGroupAddon>
+					<InputGroupAddon>
+						<HugeiconsIcon icon={Search01Icon} />
+					</InputGroupAddon>
 					<InputGroupInput
 						type="text"
 						placeholder="Search cars..."
@@ -282,11 +327,11 @@ export function CollectionFilters({
 								)}
 								<Button
 									size="xs"
-									variant="secondary"
+									variant="outline"
 									className="cursor-pointer"
 									onClick={() => onSearchChange(searchInput)}
 								>
-									<HugeiconsIcon icon={Search01Icon} /> Search
+									Search
 								</Button>
 							</div>
 						)}

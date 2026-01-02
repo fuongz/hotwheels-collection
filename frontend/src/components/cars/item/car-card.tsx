@@ -3,13 +3,13 @@
 import {
 	BookmarkAdd01Icon,
 	BookmarkCheck02Icon,
+	Cancel01Icon,
 	ChevronDown,
 	DatabaseSync01Icon,
 	Folder01Icon,
 	ImageDownload02Icon,
 	ImageNotFound01Icon,
 	ImageUploadIcon,
-	SettingsIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Image from "next/image";
@@ -60,6 +60,7 @@ export function CarCard({
 	const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
 	const [isSyncDialogOpen, setIsSyncDialogOpen] = useState(false);
 	const [isRemoveImageDialogOpen, setIsRemoveImageDialogOpen] = useState(false);
+	const [isOwnedBadgeHovered, setIsOwnedBadgeHovered] = useState(false);
 
 	// --- memo
 	const isBookmarked = useMemo(() => car?.bookmark, [car]);
@@ -80,23 +81,30 @@ export function CarCard({
 
 	const { data: session } = useSession();
 
-	const handleSave = async () => {
+	const handleSave = async (isDelete: boolean = false) => {
 		if (!session?.user) {
-			// Could show a toast or redirect to login
-			alert("Please log in to save cars");
+			toast.error("Please log in to save cars");
 			return;
 		}
+
+		const promise = isDelete
+			? api.delete(`/cars/${car.id}/save`)
+			: api.post(`/cars/${car.id}/save`);
+		const loadingMsg = isDelete ? "Deleting..." : "Saving...";
+		const successMsg = isDelete ? "Car deleted" : "Car saved";
+		const errorMsg = isDelete ? "Failed to delete car" : "Failed to save car";
+
 		setIsSaving(true);
-		toast.promise(api.post(`/cars/${car.id}/save`), {
-			loading: "Saving...",
+		toast.promise(promise, {
+			loading: loadingMsg,
 			success: () => {
 				setIsSaving(false);
 				onSaved?.();
-				return "Car saved";
+				return successMsg;
 			},
 			error: () => {
 				setIsSaving(false);
-				return "Failed to save car";
+				return errorMsg;
 			},
 		});
 	};
@@ -231,7 +239,7 @@ export function CarCard({
 					)}
 				>
 					{!isBookmarked ? (
-						<Button onClick={handleSave} disabled={isSaving}>
+						<Button onClick={() => handleSave()} disabled={isSaving}>
 							<HugeiconsIcon
 								icon={BookmarkAdd01Icon}
 								className="size-4"
@@ -241,15 +249,22 @@ export function CarCard({
 						</Button>
 					) : (
 						<Badge
-							variant="outline"
-							className="bg-indigo-200 border-indigo-300 text-indigo-600 dark:bg-indigo-950 dark:border-indigo-950 dark:text-indigo-50"
+							variant={isOwnedBadgeHovered ? "destructive" : "outline"}
+							className={cn(
+								"cursor-pointer transition-all",
+								!isOwnedBadgeHovered &&
+									"bg-indigo-200 border-indigo-300 text-indigo-600 dark:bg-indigo-950 dark:border-indigo-950 dark:text-indigo-50",
+							)}
+							onMouseEnter={() => setIsOwnedBadgeHovered(true)}
+							onMouseLeave={() => setIsOwnedBadgeHovered(false)}
+							onClick={() => handleSave(true)}
 						>
 							<HugeiconsIcon
-								icon={BookmarkCheck02Icon}
+								icon={isOwnedBadgeHovered ? Cancel01Icon : BookmarkCheck02Icon}
 								className="size-4"
 								strokeWidth={2}
 							/>
-							Owned
+							{isOwnedBadgeHovered ? "Remove" : "Owned"}
 						</Badge>
 					)}
 
@@ -258,10 +273,9 @@ export function CarCard({
 							<DropdownMenu>
 								<DropdownMenuTrigger
 									render={
-										<Button variant={isBookmarked ? "ghost" : "secondary"} />
+										<Button variant={isBookmarked ? "ghost" : "outline"} />
 									}
 								>
-									<HugeiconsIcon icon={SettingsIcon} strokeWidth={2} />
 									Actions
 									<HugeiconsIcon icon={ChevronDown} strokeWidth={2} />
 								</DropdownMenuTrigger>
@@ -269,7 +283,7 @@ export function CarCard({
 									<DropdownMenuItem onClick={() => setIsSyncDialogOpen(true)}>
 										<HugeiconsIcon
 											icon={DatabaseSync01Icon}
-											className="size-4 mr-2"
+											className="size-4 text-muted-foreground"
 											strokeWidth={2}
 										/>
 										Sync data
@@ -279,7 +293,7 @@ export function CarCard({
 									>
 										<HugeiconsIcon
 											icon={ImageNotFound01Icon}
-											className="size-4 mr-2"
+											className="size-4 text-muted-foreground"
 											strokeWidth={2}
 										/>
 										Remove image
@@ -287,7 +301,7 @@ export function CarCard({
 									<DropdownMenuItem onClick={() => setIsUploadDialogOpen(true)}>
 										<HugeiconsIcon
 											icon={ImageUploadIcon}
-											className="size-4 mr-2"
+											className="size-4 text-muted-foreground"
 											strokeWidth={2}
 										/>
 										Upload image

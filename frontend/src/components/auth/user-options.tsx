@@ -72,7 +72,7 @@ export function UserOptions() {
 								icon={CarParking02Icon}
 								className="text-muted-foreground"
 							/>
-							Your cars
+							My garage
 						</DropdownMenuItem>
 					</DropdownMenuGroup>
 					<DropdownMenuSeparator />
