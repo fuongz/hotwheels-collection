@@ -140,6 +140,27 @@ app.post(
 	},
 );
 
+app.delete("/:carVersionId/save", authMiddleware, async (c) => {
+	try {
+		const { carVersionId } = c.req.param();
+		const user = c.get("user");
+		const userCarsRepo = new UserCarsRepository(c.env);
+		const cacheService = new CacheService(c.env.KV);
+
+		// Delete from database
+		await userCarsRepo.delete(user.id, carVersionId);
+
+		// Clear cache
+		const cacheKey = `user_car:${user.id}:${carVersionId}`;
+		await cacheService.del(cacheKey);
+
+		return c.json({ success: true });
+	} catch (err: any) {
+		console.log(err);
+		return c.json({ error: err.message }, 500);
+	}
+});
+
 // ----------------------------------------------------------------------------
 // - ADMIN
 // ----------------------------------------------------------------------------
