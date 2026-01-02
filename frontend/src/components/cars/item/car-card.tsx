@@ -62,6 +62,8 @@ export function CarCard({
 	const [isRemoveImageDialogOpen, setIsRemoveImageDialogOpen] = useState(false);
 	const [isOwnedBadgeHovered, setIsOwnedBadgeHovered] = useState(false);
 
+	const { data: session } = useSession();
+
 	// --- memo
 	const isBookmarked = useMemo(() => car?.bookmark, [car]);
 	const carImage = useMemo(
@@ -78,8 +80,7 @@ export function CarCard({
 				: null,
 		[car],
 	);
-
-	const { data: session } = useSession();
+	const isAdmin = useMemo(() => session?.user.role === "admin", [session]);
 
 	const handleSave = async (isDelete: boolean = false) => {
 		if (!session?.user) {
@@ -110,7 +111,7 @@ export function CarCard({
 	};
 
 	const handleSyncData = async () => {
-		if (session?.user.role !== "admin") {
+		if (!isAdmin) {
 			toast.error("You must be an admin to do this action");
 			return;
 		}
@@ -128,7 +129,7 @@ export function CarCard({
 	};
 
 	const handleRemoveImage = async () => {
-		if (session?.user.role !== "admin") {
+		if (!isAdmin) {
 			toast.error("You must be an admin to do this action");
 			return;
 		}
@@ -149,7 +150,8 @@ export function CarCard({
 		<Card
 			className={cn(
 				"group overflow-hidden transition-all p-0",
-				isBookmarked && "ring-2 ring-indigo-200 bg-indigo-50",
+				isBookmarked &&
+					"ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/40 dark:ring-primary/60",
 			)}
 		>
 			<div className="relative aspect-[16/9] overflow-hidden">
@@ -213,17 +215,17 @@ export function CarCard({
 						</div>
 						<div className="flex items-center mt-2 flex-wrap gap-2">
 							{car.series?.map((s, index: number) => (
-								<Link href={`/collections/${s.id}`} key={`${s.id}-${index}`}>
-									<span
-										className={cn(
-											"dark:bg-orange-900/50 dark:hover:bg-orange-900 dark:text-orange-50",
-											"bg-orange-100 hover:bg-orange-200 text-orange-800",
-											"flex rounded text-xs gap-2 items-center px-1.5 hover:underline cursor-pointer hover:scale-105 transition hover:transition py-0.5",
-										)}
-									>
-										<HugeiconsIcon icon={Folder01Icon} className="size-3" />
-										{s.name}
-									</span>
+								<Link
+									href={`/collections/${s.id}`}
+									key={`${s.id}-${index}`}
+									className={cn(
+										"dark:bg-orange-900/50 un dark:hover:bg-orange-900 dark:text-orange-50",
+										"bg-orange-100 hover:bg-orange-200 text-orange-800",
+										"!no-underline hover:!underline flex rounded text-xs gap-2 items-center px-1.5 hover:underline cursor-pointer hover:scale-105 transition hover:transition py-0.5",
+									)}
+								>
+									<HugeiconsIcon icon={Folder01Icon} className="size-3" />
+									{s.name}
 								</Link>
 							))}
 						</div>
@@ -234,17 +236,17 @@ export function CarCard({
 			{session?.user && !hideOwnedBadge && (
 				<CardFooter
 					className={cn(
-						"py-4 bg-transparent",
-						isBookmarked && "border-indigo-200 bg-indigo-50",
+						"py-4 bg-transparent gap-2",
+						isBookmarked && "bg-primary/0 dark:bg-primary/40",
 					)}
 				>
 					{!isBookmarked ? (
-						<Button onClick={() => handleSave()} disabled={isSaving}>
-							<HugeiconsIcon
-								icon={BookmarkAdd01Icon}
-								className="size-4"
-								strokeWidth={2}
-							/>
+						<Button
+							className={!isAdmin ? "w-full" : "w-2/3"}
+							onClick={() => handleSave()}
+							disabled={isSaving}
+						>
+							<HugeiconsIcon icon={BookmarkAdd01Icon} strokeWidth={2} />
 							<span className="hidden sm:block">Save</span>
 						</Button>
 					) : (
@@ -253,7 +255,7 @@ export function CarCard({
 							className={cn(
 								"cursor-pointer transition-all",
 								!isOwnedBadgeHovered &&
-									"bg-indigo-200 border-indigo-300 text-indigo-600 dark:bg-indigo-950 dark:border-indigo-950 dark:text-indigo-50",
+									"bg-primary/10 border-primary/20 text-primary dark:bg-primary/95 dark:border-primary dark:text-primary-foreground",
 							)}
 							onMouseEnter={() => setIsOwnedBadgeHovered(true)}
 							onMouseLeave={() => setIsOwnedBadgeHovered(false)}
@@ -268,13 +270,11 @@ export function CarCard({
 						</Badge>
 					)}
 
-					{session.user.role === "admin" && (
-						<div className="ml-auto">
+					{isAdmin && (
+						<div className="ml-auto w-1/3">
 							<DropdownMenu>
 								<DropdownMenuTrigger
-									render={
-										<Button variant={isBookmarked ? "ghost" : "outline"} />
-									}
+									render={<Button variant="outline" className="w-full" />}
 								>
 									Actions
 									<HugeiconsIcon icon={ChevronDown} strokeWidth={2} />

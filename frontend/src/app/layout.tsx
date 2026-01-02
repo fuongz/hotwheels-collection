@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans } from "next/font/google";
+import { Bricolage_Grotesque } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import type React from "react";
 import "../styles/globals.css";
@@ -8,7 +8,7 @@ import { AuthProvider } from "@/components/auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-const fontSans = IBM_Plex_Sans({
+const fontSans = Bricolage_Grotesque({
 	subsets: ["vietnamese", "latin"],
 	weight: ["400", "500", "600", "700"],
 	variable: "--font-sans",

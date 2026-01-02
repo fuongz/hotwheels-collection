@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 							<ThemeToggle />
 							<Separator orientation="vertical" />
 							<Button
-								size="xs"
+								size="sm"
 								variant="secondary"
 								nativeButton={false}
 								render={
