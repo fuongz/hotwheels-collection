@@ -1,10 +1,17 @@
-export interface Series {
+export interface Casting {
 	id: string;
+	code: string;
 	name: string;
-	seriesNum: string;
+	bodyType: string | null;
+	firstYear: number | null;
+	avatarUrl: string | null;
+}
+
+export interface Collection {
+	id: number;
+	code: string;
+	name: string;
 	wikiSlug: string | null;
-	createdAt: string;
-	updatedAt: string;
 }
 
 export interface Bookmark {
@@ -17,14 +24,30 @@ export interface Bookmark {
 }
 
 export interface Car {
-	bookmark: Bookmark;
 	id: string;
-	toyCode: string;
-	toyIndex: string;
-	model: string;
+	year: number;
+	color: string | null;
+	tampo: string | null;
+	wheelType: string | null;
+	wheelCode: string | null;
+	baseColor: string | null;
+	baseType: string | null;
+	interiorColor: string | null;
+	windowColor: string | null;
+	mainlineNumber: string | null;
+	subSeriesNumber: string | null;
+	caseCode: string | null;
+	toyIndex: number;
+	country: string | null;
 	avatarUrl: string | null;
-	year: string;
-	series: Series[];
-	createdAt: string;
-	updatedAt: string;
+	isTreasureHunt: boolean;
+	isSuperTreasureHunt: boolean;
+	wikiSlug: string | null;
+	wikiUrl: string | null;
+	notes: string | null;
+	createdAt: number;
+	updatedAt: number;
+	casting: Casting;
+	collection: Collection;
+	bookmark?: Bookmark;
 }

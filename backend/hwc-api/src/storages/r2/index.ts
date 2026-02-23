@@ -102,11 +102,52 @@ export function generatePhotoKey(
 	return `cars/${year}/${sanitizedCode}/${index}.${extension}`;
 }
 
+export function generatePhotoKeyByArr(arr: string[]): string {
+	return `cars/${arr.join("/")}.avif`;
+}
+
 export class StorageService {
 	private bucket: R2Bucket | null;
+	private imageTransformation: ImagesBinding;
 
 	constructor(env: CloudflareBindings) {
 		this.bucket = r2Client(env, "BUCKET");
+		this.imageTransformation = env.IMAGES;
+	}
+
+	async uploadImageFromUrl(imageUrl: string, key: string): Promise<string> {
+		// Fetch the image from the URL
+		const imageResponse = await fetch(imageUrl);
+		if (!imageResponse.ok) {
+			throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
+		}
+
+		// Get the image as ArrayBuffer
+		const response = await this.imageTransformation
+			.input(imageResponse.body as ReadableStream<Uint8Array>)
+			.transform({
+				width: 1024,
+				height: 1024,
+			})
+			.output({
+				format: "image/avif",
+			});
+
+		const transformedResponse = response.response();
+		if (!transformedResponse.ok) {
+			throw new Error(
+				`Failed to transform image: ${transformedResponse.statusText}`,
+			);
+		}
+		const arrBuffer = await transformedResponse.arrayBuffer();
+
+		// Upload to R2 with WebP content type
+		await this.bucket?.put(key, arrBuffer, {
+			httpMetadata: {
+				contentType: "image/avif",
+			},
+		});
+		return `r2://${key}`;
 	}
 
 	async uploadImageFromBinary(

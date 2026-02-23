@@ -2,7 +2,7 @@ type: http_request
 model: http_request
 id: rq_QNskC2ittz
 createdAt: 2025-12-18T17:04:01.867469
-updatedAt: 2025-12-29T08:15:57.054651
+updatedAt: 2026-02-23T05:02:08.904958
 workspaceId: wk_DSxpsxrc7P
 folderId: fl_fRUtFozFpT
 authentication: {}
@@ -26,5 +26,5 @@ headers:
 method: GET
 name: Sync cars
 sortPriority: 0.0
-url: ${[ ROOT_URL ]}/admin/sync/2023
+url: ${[ ROOT_URL ]}/admin/sync/2026
 urlParameters: []

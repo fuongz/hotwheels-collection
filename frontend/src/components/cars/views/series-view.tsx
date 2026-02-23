@@ -12,7 +12,7 @@ import {
 	Button,
 	Progress,
 } from "@/components/ui";
-import type { Car, Series } from "@/types/car";
+import type { Car, Collection } from "@/types/car";
 
 export function CarsSeriesView({
 	cars,
@@ -29,30 +29,27 @@ export function CarsSeriesView({
 	};
 	onSaved?: (car: Car) => void;
 }) {
-	// Group cars by series
+	// Group cars by collection
 	const groupedCars = useMemo(() => {
-		const groups: Record<string, { series: Series; cars: Car[] }> = {};
+		const groups: Record<string, { collection: Collection; cars: Car[] }> = {};
 		cars.forEach((car) => {
-			if (car.series && car.series.length > 0) {
-				car.series.forEach((series) => {
-					if (!groups[series.id]) {
-						groups[series.id] = {
-							series,
-							cars: [],
-						};
-					}
-					groups[series.id].cars.push(car);
-				});
+			if (car.collection) {
+				const key = String(car.collection.id);
+				if (!groups[key]) {
+					groups[key] = {
+						collection: car.collection,
+						cars: [],
+					};
+				}
+				groups[key].cars.push(car);
 			} else {
 				if (!groups.uncategorized) {
 					groups.uncategorized = {
-						series: {
-							id: "uncategorized",
+						collection: {
+							id: 0,
+							code: "uncategorized",
 							name: "Uncategorized",
-							seriesNum: "0",
 							wikiSlug: null,
-							createdAt: "",
-							updatedAt: "",
 						},
 						cars: [],
 					};
@@ -61,7 +58,7 @@ export function CarsSeriesView({
 			}
 		});
 		return Object.values(groups).sort((a, b) => {
-			return b.series.name.localeCompare(a.series.name);
+			return b.collection.name.localeCompare(a.collection.name);
 		});
 	}, [cars]);
 
@@ -83,30 +80,24 @@ export function CarsSeriesView({
 				</p>
 			</div>
 
-			{/* Grouped Cars by Series/Collection */}
+			{/* Grouped Cars by Collection */}
 			<div>
 				<Accordion>
 					{groupedCars.map((group) => (
-						<AccordionItem value={group.series.id} key={group.series.id}>
+						<AccordionItem
+							value={String(group.collection.id)}
+							key={group.collection.id}
+						>
 							<AccordionTrigger className="hover:no-underline">
 								{/* Collection Header */}
 								<div className="flex items-center gap-3 w-full">
 									<h2 className="text-base font-bold text-foreground">
-										{group.series.name}
+										{group.collection.name}
 										<span className="font-normal ml-2 text-muted-foreground">
-											({group.cars.length}/{group.series.seriesNum || "?"})
+											({group.cars.length})
 										</span>
 									</h2>
-									<Progress
-										value={
-											group.series.seriesNum
-												? (group.cars.length /
-														parseInt(group.series.seriesNum, 10)) *
-													100
-												: 0
-										}
-										className="w-[100px]"
-									/>
+									<Progress value={0} className="w-[100px]" />
 								</div>
 							</AccordionTrigger>
 
@@ -133,7 +124,9 @@ export function CarsSeriesView({
 									<Button
 										nativeButton={false}
 										className="!no-underline"
-										render={<Link href={`/collections/${group.series.id}`} />}
+										render={
+											<Link href={`/collections/${group.collection.id}`} />
+										}
 									>
 										View All
 										<HugeiconsIcon icon={ArrowRight02Icon} />

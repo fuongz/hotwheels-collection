@@ -44,12 +44,7 @@ app.get(
 				await carsRepo.paginate(
 					parseInt(page, 10),
 					parseInt(limit, 10),
-					{
-						sortBy,
-						sortOrder,
-						year,
-						q,
-					},
+					{ sortBy, sortOrder, year, q },
 					user ? user.id : undefined,
 				),
 			);
@@ -64,7 +59,7 @@ app.get(
 // - AUTHENTICATED
 // ----------------------------------------------------------------------------
 app.post(
-	"/:carVersionId/save",
+	"/:releaseId/save",
 	authMiddleware,
 	zValidator(
 		"json",
@@ -75,63 +70,50 @@ app.post(
 	),
 	async (c) => {
 		try {
-			const { carVersionId } = c.req.param();
+			const { releaseId } = c.req.param();
 			const body = c.req.valid("json");
 			const user = c.get("user");
 			const userCarsRepo = new UserCarsRepository(c.env);
 			const cacheService = new CacheService(c.env.KV);
 
-			// Two-layer duplicate check: KV cache first, then D1
-			const cacheKey = `user_car:${user.id}:${carVersionId}`;
+			const cacheKey = `user_car:${user.id}:${releaseId}`;
 
-			// Layer 1: Check KV cache
+			// Layer 1: check KV cache
 			const cachedUserCar = await cacheService.get(cacheKey);
 			if (cachedUserCar) {
-				// Found in cache - this is likely a duplicate attempt
 				const userCar = await userCarsRepo.upsert({
 					userId: user.id,
-					carVersionId: carVersionId,
+					releaseId,
 					quantity: body.quantity,
 					notes: body.notes,
 				});
-
-				// Update cache with new values
-				await cacheService.set(cacheKey, userCar, 86400); // 1 day
-
+				await cacheService.set(cacheKey, userCar, 86400);
 				return c.json({ success: true, data: userCar, cached: true });
 			}
 
-			// Layer 2: Check D1 database
-			const existing = await userCarsRepo.findByUserIdAndCarId(
+			// Layer 2: check D1
+			const existing = await userCarsRepo.findByUserIdAndReleaseId(
 				user.id,
-				carVersionId,
+				releaseId,
 			);
 			if (existing) {
-				// Found in database - update the record
 				const userCar = await userCarsRepo.upsert({
 					userId: user.id,
-					carVersionId,
+					releaseId,
 					quantity: body.quantity,
 					notes: body.notes,
 				});
-
-				// Cache the result for future requests
-				await cacheService.set(cacheKey, userCar, 86400); // 1 day
-
+				await cacheService.set(cacheKey, userCar, 86400);
 				return c.json({ success: true, data: userCar, cached: false });
 			}
 
-			// Not a duplicate - create new record
 			const userCar = await userCarsRepo.upsert({
 				userId: user.id,
-				carVersionId,
+				releaseId,
 				quantity: body.quantity,
 				notes: body.notes,
 			});
-
-			// Cache the newly created record
-			await cacheService.set(cacheKey, userCar, 86400); // 1 day
-
+			await cacheService.set(cacheKey, userCar, 86400);
 			return c.json({ success: true, data: userCar });
 		} catch (err: any) {
 			console.log(err);
@@ -140,18 +122,16 @@ app.post(
 	},
 );
 
-app.delete("/:carVersionId/save", authMiddleware, async (c) => {
+app.delete("/:releaseId/save", authMiddleware, async (c) => {
 	try {
-		const { carVersionId } = c.req.param();
+		const { releaseId } = c.req.param();
 		const user = c.get("user");
 		const userCarsRepo = new UserCarsRepository(c.env);
 		const cacheService = new CacheService(c.env.KV);
 
-		// Delete from database
-		await userCarsRepo.delete(user.id, carVersionId);
+		await userCarsRepo.delete(user.id, releaseId);
 
-		// Clear cache
-		const cacheKey = `user_car:${user.id}:${carVersionId}`;
+		const cacheKey = `user_car:${user.id}:${releaseId}`;
 		await cacheService.del(cacheKey);
 
 		return c.json({ success: true });
@@ -165,13 +145,13 @@ app.delete("/:carVersionId/save", authMiddleware, async (c) => {
 // - ADMIN
 // ----------------------------------------------------------------------------
 app.post(
-	"/:carId/remove-image",
+	"/:releaseId/remove-image",
 	adminMiddleware,
 	async ({ env, req, json }) => {
 		try {
-			const { carId } = req.param();
+			const { releaseId } = req.param();
 			const carsRepo = new CarsRepository(env);
-			return json(await carsRepo.removeImage(carId));
+			return json(await carsRepo.removeImage(releaseId));
 		} catch (err: any) {
 			console.log(err);
 			return json({ error: err.message }, 500);
@@ -180,7 +160,7 @@ app.post(
 );
 
 app.post(
-	"/:carId/upload-image",
+	"/:releaseId/upload-image",
 	adminMiddleware,
 	zValidator(
 		"json",
@@ -192,11 +172,11 @@ app.post(
 	),
 	async ({ env, req, json }) => {
 		try {
-			const { carId } = req.param();
+			const { releaseId } = req.param();
 			const image = req.valid("json");
 			const carsRepo = new CarsRepository(env);
 			return json(
-				await carsRepo.uploadImage(carId, {
+				await carsRepo.uploadImage(releaseId, {
 					buffer: image.buffer,
 					filename: image.filename,
 					contentType: image.contentType,
@@ -209,11 +189,12 @@ app.post(
 	},
 );
 
-app.post("/:carId/sync", adminMiddleware, async ({ env, req, json }) => {
+// sync pulls casting + designer data from Fandom wiki into the DB
+app.post("/:castingId/sync", adminMiddleware, async ({ env, req, json }) => {
 	try {
-		const { carId } = req.param();
+		const { castingId } = req.param();
 		const carsRepo = new CarsRepository(env);
-		return json(await carsRepo.sync(carId));
+		return json(await carsRepo.sync(castingId));
 	} catch (err: any) {
 		console.log(err);
 		return json({ error: err.message }, 500);

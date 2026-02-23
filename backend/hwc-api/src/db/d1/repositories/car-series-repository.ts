@@ -1,39 +1,43 @@
 import { and, eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-import { type CarSeries, carSeries, type NewCarSeries } from "../schema";
+import {
+	type NewReleaseExclusive,
+	type ReleaseExclusive,
+	releaseExclusives,
+} from "../schema";
 
-export class CarSeriesRepository {
+export class ReleaseExclusivesRepository {
 	constructor(private db: DrizzleD1Database) {}
 
 	async create(
-		data: Omit<NewCarSeries, "id" | "createdAt" | "updatedAt">,
-	): Promise<CarSeries> {
-		const [created] = await this.db.insert(carSeries).values(data).returning();
+		data: Omit<NewReleaseExclusive, "id">,
+	): Promise<ReleaseExclusive> {
+		const [created] = await this.db
+			.insert(releaseExclusives)
+			.values(data)
+			.returning();
 		return created;
 	}
 
 	async upsert(
-		data: Omit<NewCarSeries, "id" | "createdAt" | "updatedAt">,
-	): Promise<CarSeries> {
+		data: Omit<NewReleaseExclusive, "id">,
+	): Promise<ReleaseExclusive> {
 		const existing = await this.db
 			.select()
-			.from(carSeries)
+			.from(releaseExclusives)
 			.where(
 				and(
-					eq(carSeries.carVersionId, data.carVersionId),
-					eq(carSeries.seriesId, data.seriesId),
+					eq(releaseExclusives.releaseId, data.releaseId),
+					eq(releaseExclusives.exclusiveProgramId, data.exclusiveProgramId),
 				),
 			)
 			.get();
 
 		if (existing) {
 			const [updated] = await this.db
-				.update(carSeries)
-				.set({
-					...data,
-					updatedAt: new Date(),
-				})
-				.where(eq(carSeries.id, existing.id))
+				.update(releaseExclusives)
+				.set({ ...data })
+				.where(eq(releaseExclusives.id, existing.id))
 				.returning();
 			return updated;
 		}
@@ -41,42 +45,44 @@ export class CarSeriesRepository {
 		return await this.create(data);
 	}
 
-	async findByCarId(carVersionId: string): Promise<CarSeries[]> {
+	async findByReleaseId(releaseId: string): Promise<ReleaseExclusive[]> {
 		return await this.db
 			.select()
-			.from(carSeries)
-			.where(eq(carSeries.carVersionId, carVersionId))
+			.from(releaseExclusives)
+			.where(eq(releaseExclusives.releaseId, releaseId))
 			.all();
 	}
 
-	async findBySeriesId(seriesId: string): Promise<CarSeries[]> {
+	async findByExclusiveProgramId(
+		exclusiveProgramId: string,
+	): Promise<ReleaseExclusive[]> {
 		return await this.db
 			.select()
-			.from(carSeries)
-			.where(eq(carSeries.seriesId, seriesId))
+			.from(releaseExclusives)
+			.where(eq(releaseExclusives.exclusiveProgramId, exclusiveProgramId))
 			.all();
 	}
 
-	async getAll(): Promise<CarSeries[]> {
-		return await this.db.select().from(carSeries).all();
+	async getAll(): Promise<ReleaseExclusive[]> {
+		return await this.db.select().from(releaseExclusives).all();
 	}
 
-	async deleteByCarId(carVersionId: string): Promise<void> {
+	async deleteByReleaseId(releaseId: string): Promise<void> {
 		await this.db
-			.delete(carSeries)
-			.where(eq(carSeries.carVersionId, carVersionId));
+			.delete(releaseExclusives)
+			.where(eq(releaseExclusives.releaseId, releaseId));
 	}
 
-	async deleteByCarAndSeries(
-		carVersionId: string,
-		seriesId: string,
+	async deleteByReleaseAndProgram(
+		releaseId: string,
+		exclusiveProgramId: string,
 	): Promise<void> {
 		await this.db
-			.delete(carSeries)
+			.delete(releaseExclusives)
 			.where(
 				and(
-					eq(carSeries.carVersionId, carVersionId),
-					eq(carSeries.seriesId, seriesId),
+					eq(releaseExclusives.releaseId, releaseId),
+					eq(releaseExclusives.exclusiveProgramId, exclusiveProgramId),
 				),
 			);
 	}

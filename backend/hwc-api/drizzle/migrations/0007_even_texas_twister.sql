@@ -1,1 +1,0 @@
-ALTER TABLE `cars` ADD `wiki_slug` text;

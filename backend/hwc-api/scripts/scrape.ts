@@ -1,7 +1,5 @@
 import { parse } from "parse5";
 import { CacheService } from "../src/cache/kv/cache.service";
-import { writeFileSync, mkdirSync } from "node:fs";
-import dayjs from "dayjs";
 
 type Parse5Node = {
   nodeName: string;

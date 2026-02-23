@@ -82,7 +82,7 @@ export function DialogUploadImage({
 				<DialogHeader>
 					<DialogTitle>Upload Image</DialogTitle>
 					<DialogDescription>
-						Upload an image for {car.model} (#{car.toyCode})
+						Upload an image for {car.casting.name} (#{car.casting.code})
 					</DialogDescription>
 				</DialogHeader>
 				<div className="space-y-4">

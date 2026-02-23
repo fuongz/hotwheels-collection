@@ -159,7 +159,7 @@ export function CarCard({
 					<PhotoView src={carImage}>
 						<Image
 							src={carImage}
-							alt={car.model}
+							alt={`car-${car.id}`}
 							fill
 							loading="eager"
 							onError={() => setIsImageError(true)}
@@ -182,19 +182,21 @@ export function CarCard({
 				<div className="absolute top-3 left-3">
 					<Badge
 						variant="outline"
-						className="bg-background/80 backdrop-blur-sm border-border/50 text-foreground"
+						className="text-xs bg-background/80 backdrop-blur-sm border-border/50 text-foreground"
 					>
 						{car.year}
 					</Badge>
 				</div>
-				<div className="absolute top-3 right-3 flex items-center gap-2">
-					<Badge
-						variant="outline"
-						className="bg-background/80 backdrop-blur-sm border-border/50 text-foreground"
-					>
-						No. <span className="font-bold">{car.toyIndex}</span>
-					</Badge>
-				</div>
+				{car.toyIndex && (
+					<div className="absolute top-3 right-3 flex items-center gap-2">
+						<Badge
+							variant="outline"
+							className="text-xs bg-background/80 backdrop-blur-sm border-border/50 text-foreground"
+						>
+							No. <span className="font-bold">{car.toyIndex}</span>
+						</Badge>
+					</div>
+				)}
 			</div>
 			{size === "full" && (
 				<CardContent
@@ -206,18 +208,12 @@ export function CarCard({
 				>
 					<div className="space-y-2">
 						<h3 className="font-semibold text-sm text-foreground line-clamp-2 leading-relaxed">
-							{car.model}
+							{car.casting.name}
 						</h3>
-						<div className="flex items-center justify-between">
-							<span className="text-xs text-muted-foreground">
-								#{car.toyCode}
-							</span>
-						</div>
 						<div className="flex items-center mt-2 flex-wrap gap-2">
-							{car.series?.map((s, index: number) => (
+							{car.collection && (
 								<Link
-									href={`/collections/${s.id}`}
-									key={`${s.id}-${index}`}
+									href={`/collections/${car.collection.id}`}
 									className={cn(
 										"dark:bg-orange-900/50 un dark:hover:bg-orange-900 dark:text-orange-50",
 										"bg-orange-100 hover:bg-orange-200 text-orange-800",
@@ -225,9 +221,9 @@ export function CarCard({
 									)}
 								>
 									<HugeiconsIcon icon={Folder01Icon} className="size-3" />
-									{s.name}
+									{car.collection.name}
 								</Link>
-							))}
+							)}
 						</div>
 					</div>
 				</CardContent>
@@ -276,7 +272,7 @@ export function CarCard({
 								<DropdownMenuTrigger
 									render={<Button variant="outline" className="w-full" />}
 								>
-									Actions
+									<span className="hidden sm:block">Actions</span>
 									<HugeiconsIcon icon={ChevronDown} strokeWidth={2} />
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end" className="w-40">

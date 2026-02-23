@@ -6,21 +6,39 @@ import {
 	CloudinaryClient,
 	createCloudinaryClient,
 } from "../../../storages/cloudinary";
-import { generatePhotoKey, StorageService } from "../../../storages/r2";
+import {
+	generatePhotoKey,
+	generatePhotoKeyByArr,
+	StorageService,
+} from "../../../storages/r2";
 import { dbClient } from "..";
 import {
-	type CarVersion,
-	carSeries,
-	carVersions,
-	type NewCarVersion,
-	type Series,
-	series,
+	type Casting,
+	castingDesigners,
+	castings,
+	collections,
+	designers,
+	type Release,
+	releases,
 	type UserCar,
 	userCars,
 } from "../schema";
 
-type CarWithSeries = Partial<CarVersion> & {
-	series: Partial<Series>[];
+type ReleaseWithDetails = Partial<Release> & {
+	casting: {
+		id: string;
+		code: string;
+		name: string;
+		bodyType: string | null;
+		firstYear: number | null;
+		avatarUrl: string | null;
+	} | null;
+	collection: {
+		id: number;
+		code: string;
+		name: string;
+		wikiSlug: string | null;
+	} | null;
 	bookmark?: Partial<UserCar>;
 };
 
@@ -45,139 +63,131 @@ export class CarsRepository {
 		return this.cloudinary;
 	}
 
-	private buildCarsWithSeriesQuery() {
+	private buildReleasesQuery() {
 		return sql`
 SELECT
-	c.id,
-	c.model,
-	c.year,
-	c.wiki_slug as wikiSlug,
-	c.toy_code as toyCode,
-	c.toy_index as toyIndex,
-	c.avatar_url as avatarUrl,
-	c.created_at as createdAt,
-	c.updated_at as updatedAt,
-	COALESCE(
-		json_group_array(
-			CASE
-			WHEN col.id IS NOT NULL
-			THEN json_object(
-				'id', col.id,
-				'name', col.name,
-				'wikiSlug', col.wiki_slug,
-				'seriesNum', col.series_num,
-				'createdAt', col.created_at,
-				'updatedAt', col.updated_at
-			)
-			END
-		) FILTER (WHERE col.id IS NOT NULL),
-		json_array()
-	) as series
-FROM ${carVersions} c
-LEFT JOIN ${carSeries} cc ON c.id = cc.car_version_id
-LEFT JOIN ${series} col ON cc.series_id = col.id`;
+	r.id,
+	r.year,
+	r.color,
+	r.tampo,
+	r.wheel_type as wheelType,
+	r.wheel_code as wheelCode,
+	r.base_color as baseColor,
+	r.base_type as baseType,
+	r.interior_color as interiorColor,
+	r.window_color as windowColor,
+	r.mainline_number as mainlineNumber,
+	r.sub_series_number as subSeriesNumber,
+	r.case_code as caseCode,
+	r.toy_index as toyIndex,
+	r.country,
+	r.avatar_url as avatarUrl,
+	r.is_treasure_hunt as isTreasureHunt,
+	r.is_super_treasure_hunt as isSuperTreasureHunt,
+	r.wiki_slug as wikiSlug,
+	r.wiki_url as wikiUrl,
+	r.notes,
+	r.created_at as createdAt,
+	r.updated_at as updatedAt,
+	c.id as casting_id,
+	c.code as casting_code,
+	c.name as casting_name,
+	c.body_type as casting_bodyType,
+	c.first_year as casting_firstYear,
+	c.avatar_url as casting_avatarUrl,
+	col.id as collection_id,
+	col.code as collection_code,
+	col.name as collection_name,
+	col.wiki_slug as collection_wikiSlug
+FROM ${releases} r
+LEFT JOIN ${castings} c ON r.casting_id = c.id
+LEFT JOIN ${collections} col ON r.collection_id = col.id`;
 	}
 
-	private mapToCarWithSeries(results: any[]): CarWithSeries[] {
+	private mapToReleaseWithDetails(results: any[]): ReleaseWithDetails[] {
 		return results.map((row) => ({
 			id: row.id,
-			model: row.model,
 			year: row.year,
-			toyCode: row.toyCode,
+			color: row.color,
+			tampo: row.tampo,
+			wheelType: row.wheelType,
+			wheelCode: row.wheelCode,
+			baseColor: row.baseColor,
+			baseType: row.baseType,
+			interiorColor: row.interiorColor,
+			windowColor: row.windowColor,
+			mainlineNumber: row.mainlineNumber,
+			subSeriesNumber: row.subSeriesNumber,
+			caseCode: row.caseCode,
 			toyIndex: row.toyIndex,
+			country: row.country,
 			avatarUrl: row.avatarUrl,
+			isTreasureHunt: Boolean(row.isTreasureHunt),
+			isSuperTreasureHunt: Boolean(row.isSuperTreasureHunt),
+			wikiSlug: row.wikiSlug,
+			wikiUrl: row.wikiUrl,
+			notes: row.notes,
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,
-			series: JSON.parse(row.series).map((col: any) => ({
-				...col,
-				createdAt: col.createdAt,
-			})),
+			casting: row.casting_id
+				? {
+						id: row.casting_id,
+						code: row.casting_code,
+						name: row.casting_name,
+						bodyType: row.casting_bodyType,
+						firstYear: row.casting_firstYear,
+						avatarUrl: row.casting_avatarUrl,
+					}
+				: null,
+			collection: row.collection_id
+				? {
+						id: row.collection_id,
+						code: row.collection_code,
+						name: row.collection_name,
+						wikiSlug: row.collection_wikiSlug,
+					}
+				: null,
 		}));
-	}
-
-	async upsert(
-		data: Omit<NewCarVersion, "id" | "createdAt" | "updatedAt">,
-	): Promise<CarVersion> {
-		const existing = await this.db
-			.select()
-			.from(carVersions)
-			.where(eq(carVersions.toyCode, data.toyCode))
-			.get();
-
-		if (existing) {
-			const [updated] = await this.db
-				.update(carVersions)
-				.set({
-					...data,
-					updatedAt: new Date(),
-				})
-				.where(eq(carVersions.id, existing.id))
-				.returning();
-			return updated;
-		}
-		const [created] = await this.db
-			.insert(carVersions)
-			.values(data)
-			.returning();
-		return created;
 	}
 
 	async responseWithBookmarks(
 		response: {
-			data: CarWithSeries[];
+			data: ReleaseWithDetails[];
 			meta: { page: number; limit: number; total: number };
 		},
 		userId?: string,
 	): Promise<{
-		data: CarWithSeries[];
+		data: ReleaseWithDetails[];
 		meta: { page: number; limit: number; total: number };
 	}> {
-		// -- if no userId provided, return response as-is
-		if (!userId) {
-			return response;
-		}
+		if (!userId) return response;
+		if (response.data.length === 0) return response;
 
-		// -- if no data, return response as-is
-		if (response.data.length === 0) {
-			return response;
-		}
-
-		// -- extract car IDs from the response
-		const carVersionIds = response.data
-			.map((car) => car.id)
+		const releaseIds = response.data
+			.map((r) => r.id)
 			.filter((id): id is string => id !== undefined);
 
-		// -- if no valid car IDs, return response as-is
-		if (carVersionIds.length === 0) {
-			return response;
-		}
+		if (releaseIds.length === 0) return response;
 
-		// -- query user_cars table for bookmarks
 		const bookmarks = await this.db
 			.select()
 			.from(userCars)
 			.where(
 				and(
 					eq(userCars.userId, userId),
-					inArray(userCars.carVersionId, carVersionIds),
+					inArray(userCars.releaseId, releaseIds),
 				),
 			)
 			.all();
 
-		// -- create a map for quick lookup: carVersionId -> UserCar
-		const bookmarkMap = new Map(
-			bookmarks.map((bookmark) => [bookmark.carVersionId, bookmark]),
-		);
-
-		// -- attach bookmarks to each car
-		const dataWithBookmarks = response.data.map((car) => ({
-			...car,
-			bookmark: car.id ? bookmarkMap.get(car.id) : undefined,
-		}));
+		const bookmarkMap = new Map(bookmarks.map((b) => [b.releaseId, b]));
 
 		return {
 			...response,
-			data: dataWithBookmarks,
+			data: response.data.map((r) => ({
+				...r,
+				bookmark: r.id ? bookmarkMap.get(r.id) : undefined,
+			})),
 		};
 	}
 
@@ -192,179 +202,149 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 			year?: string;
 		},
 	): Promise<{
-		data: CarWithSeries[];
+		data: ReleaseWithDetails[];
 		meta: { page: number; limit: number; total: number };
 	}> {
 		const { page, limit, sortBy, sortOrder, ...whereQueries } = query;
 		const cacheKey = `user:${userId}:cars:${JSON.stringify({ page, limit, query })}`;
 
-		// --------------------
-		// -- check cache first
 		const cached = await this.cache.get<{
-			data: CarWithSeries[];
+			data: ReleaseWithDetails[];
 			meta: { page: number; limit: number; total: number };
 		}>(cacheKey);
-
-		// -- return cache
 		if (cached) {
 			console.log("----> LOG [CACHE] user cars list found in cache!");
 			return cached;
 		}
-		// --------------------
 
 		const offset = (page - 1) * limit;
 		const conditions = [sql`uc.user_id = ${userId}`];
 
-		// Apply filters
 		if (whereQueries.q) {
 			const searchPattern = `%${whereQueries.q}%`;
 			conditions.push(
-				sql`(c.model LIKE ${searchPattern} OR c.toy_code LIKE ${searchPattern})`,
+				sql`(c.name LIKE ${searchPattern} OR c.code LIKE ${searchPattern})`,
 			);
 		}
 		if (whereQueries.year) {
-			conditions.push(sql`c.year = ${whereQueries.year}`);
+			conditions.push(sql`r.year = ${whereQueries.year}`);
 		}
 
-		// -- check if we have filters (excluding the userId condition)
 		const hasFilters = conditions.length > 1;
-
-		// -- count total (with cache for unfiltered queries)
 		let total = 0;
+
 		if (!hasFilters) {
-			// -- try to get cached total count for this user
 			const countCacheKey = `user:${userId}:cars:total:count`;
 			const cachedTotal = await this.cache.get<number>(countCacheKey);
 			if (cachedTotal !== null) {
 				console.log("----> LOG [CACHE] total user car count found in cache!");
 				total = cachedTotal;
 			} else {
-				// -- fetch and cache total count for this user
-				const countQuery = sql`
-SELECT COUNT(uc.id) as total
-FROM ${userCars} uc
-WHERE uc.user_id = ${userId}`;
-
-				const countResult = await this.db.run(countQuery);
+				const countResult = await this.db.run(
+					sql`SELECT COUNT(uc.id) as total FROM ${userCars} uc WHERE uc.user_id = ${userId}`,
+				);
 				total = (countResult.results[0] as any)?.total || 0;
 				await this.cache.set(countCacheKey, total, 300);
 			}
 		} else {
-			// -- with filters, always query the count
 			let countQuery = sql`
 SELECT COUNT(uc.id) as total
 FROM ${userCars} uc
-INNER JOIN ${carVersions} c ON uc.car_version_id = c.id`;
+INNER JOIN ${releases} r ON uc.release_id = r.id
+INNER JOIN ${castings} c ON r.casting_id = c.id`;
 			countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
 			const countResult = await this.db.run(countQuery);
 			total = (countResult.results[0] as any)?.total || 0;
 		}
 
-		// -- if no results, return early
 		if (total === 0) {
-			const emptyResponse = {
-				data: [],
-				meta: { page, limit, total: 0 },
-			};
+			const emptyResponse = { data: [], meta: { page, limit, total: 0 } };
 			await this.cache.set(cacheKey, emptyResponse, 300);
 			return emptyResponse;
 		}
 
-		// --------------------
-		// Solution 1: Single Query Approach
-		// Combines user_cars + cars + series in one query
-		// --------------------
+		const columnMap: Record<string, string> = {
+			name: "c.name",
+			year: "r.year",
+			color: "r.color",
+			createdAt: "uc.created_at",
+		};
+		const orderColumn = sortBy || "createdAt";
+		const orderDirection = (sortOrder || "desc").toUpperCase();
+		const sqlColumn = columnMap[orderColumn] || "uc.created_at";
+
 		let sqlQuery = sql`
 SELECT
-	c.id,
-	c.model,
-	c.year,
-	c.wiki_slug as wikiSlug,
-	c.toy_code as toyCode,
-	c.toy_index as toyIndex,
-	c.avatar_url as avatarUrl,
-	c.created_at as createdAt,
-	c.updated_at as updatedAt,
+	r.id,
+	r.year,
+	r.color,
+	r.tampo,
+	r.wheel_type as wheelType,
+	r.avatar_url as avatarUrl,
+	r.is_treasure_hunt as isTreasureHunt,
+	r.is_super_treasure_hunt as isSuperTreasureHunt,
+	r.mainline_number as mainlineNumber,
+	r.created_at as createdAt,
+	r.updated_at as updatedAt,
+	c.id as casting_id,
+	c.code as casting_code,
+	c.name as casting_name,
+	c.avatar_url as casting_avatarUrl,
+	col.id as collection_id,
+	col.code as collection_code,
+	col.name as collection_name,
+	col.wiki_slug as collection_wikiSlug,
 	uc.id as bookmark_id,
 	uc.quantity as bookmark_quantity,
 	uc.notes as bookmark_notes,
 	uc.created_at as bookmark_createdAt,
-	uc.updated_at as bookmark_updatedAt,
-	COALESCE(
-		json_group_array(
-			CASE
-			WHEN col.id IS NOT NULL
-			THEN json_object(
-				'id', col.id,
-				'name', col.name,
-				'wikiSlug', col.wiki_slug,
-				'seriesNum', col.series_num,
-				'createdAt', col.created_at,
-				'updatedAt', col.updated_at
-			)
-			END
-		) FILTER (WHERE col.id IS NOT NULL),
-		json_array()
-	) as series
+	uc.updated_at as bookmark_updatedAt
 FROM ${userCars} uc
-INNER JOIN ${carVersions} c ON uc.car_version_id = c.id
-LEFT JOIN ${carSeries} cc ON c.id = cc.car_version_id
-LEFT JOIN ${series} col ON cc.series_id = col.id`;
+INNER JOIN ${releases} r ON uc.release_id = r.id
+LEFT JOIN ${castings} c ON r.casting_id = c.id
+LEFT JOIN ${collections} col ON r.collection_id = col.id`;
 
-		// -- apply conditions
 		sqlQuery = sql`${sqlQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
-
-		// -- group by
-		sqlQuery = sql`${sqlQuery} GROUP BY c.id, uc.id`;
-
-		// -- map column names to SQL column references
-		const columnMap: Record<string, string> = {
-			model: "c.model",
-			year: "c.year",
-			createdAt: "c.created_at",
-		};
-
-		const orderColumn = sortBy || "createdAt";
-		const orderDirection = (sortOrder || "desc").toUpperCase();
-		const sqlColumn = columnMap[orderColumn] || "c.created_at";
-
-		// -- apply order by
 		sqlQuery = sql`${sqlQuery} ORDER BY ${sql.raw(sqlColumn)} ${sql.raw(orderDirection)}`;
-
-		// -- apply limit and offset
 		sqlQuery = sql`${sqlQuery} LIMIT ${sql.raw(limit.toString())} OFFSET ${sql.raw(offset.toString())}`;
 
-		// -- execute query
 		const result = await this.db.run(sqlQuery);
 
-		if (!result.results || result.results.length === 0) {
-			const emptyResponse = {
-				data: [],
-				meta: { page, limit, total },
-			};
-			await this.cache.set(cacheKey, emptyResponse, 300);
-			return emptyResponse;
-		}
-
-		// -- map results including bookmark data
-		const carsWithSeries = result.results.map((row: any) => ({
+		const data = (result.results as any[]).map((row) => ({
 			id: row.id,
-			model: row.model,
 			year: row.year,
-			toyCode: row.toyCode,
-			toyIndex: row.toyIndex,
+			color: row.color,
+			tampo: row.tampo,
+			wheelType: row.wheelType,
 			avatarUrl: row.avatarUrl,
+			isTreasureHunt: Boolean(row.isTreasureHunt),
+			isSuperTreasureHunt: Boolean(row.isSuperTreasureHunt),
+			mainlineNumber: row.mainlineNumber,
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,
-			series: JSON.parse(row.series).map((col: any) => ({
-				...col,
-				createdAt: col.createdAt,
-			})),
+			casting: row.casting_id
+				? {
+						id: row.casting_id,
+						code: row.casting_code,
+						name: row.casting_name,
+						bodyType: null,
+						firstYear: null,
+						avatarUrl: row.casting_avatarUrl,
+					}
+				: null,
+			collection: row.collection_id
+				? {
+						id: row.collection_id,
+						code: row.collection_code,
+						name: row.collection_name,
+						wikiSlug: row.collection_wikiSlug,
+					}
+				: null,
 			bookmark: row.bookmark_id
 				? {
 						id: row.bookmark_id,
-						userId: userId,
-						carVersionId: row.id,
+						userId,
+						releaseId: row.id,
 						quantity: row.bookmark_quantity,
 						notes: row.bookmark_notes,
 						createdAt: row.bookmark_createdAt,
@@ -373,18 +353,13 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 				: undefined,
 		}));
 
-		const response = {
-			data: carsWithSeries,
-			meta: { page, limit, total },
-		};
-
-		// -- cache the response
-		await this.cache.set(cacheKey, response, 300); // Cache for 5 minutes
+		const response = { data, meta: { page, limit, total } };
+		await this.cache.set(cacheKey, response, 300);
 		return response;
 	}
 
 	async paginateByCollectionId(
-		collectionId: string,
+		collectionId: number,
 		page: number,
 		limit: number,
 		query: {
@@ -395,47 +370,38 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 		},
 		userId?: string,
 	): Promise<{
-		data: CarWithSeries[];
+		data: ReleaseWithDetails[];
 		meta: { page: number; limit: number; total: number };
 	}> {
 		const cacheKey = `collection:${collectionId}:${JSON.stringify({ page, limit, query })}`;
 		const { sortBy, sortOrder, ...whereQueries } = query;
 
-		// --------------------
-		// -- check cache first
 		const cached = await this.cache.get<{
-			data: CarWithSeries[];
+			data: ReleaseWithDetails[];
 			meta: { page: number; limit: number; total: number };
 		}>(cacheKey);
-
-		// -- return cache
 		if (cached) {
 			console.log("----> LOG [CACHE] car collection list found in cache!");
 			return this.responseWithBookmarks(cached, userId);
 		}
-		// --------------------
 
 		const offset = (page - 1) * limit;
-		const conditions = [sql`cc.series_id = ${collectionId}`];
+		const conditions = [sql`r.collection_id = ${collectionId}`];
 
-		// -- where queries
 		if (whereQueries.q) {
 			const searchPattern = `%${whereQueries.q}%`;
 			conditions.push(
-				sql`(c.model LIKE ${searchPattern} OR c.toy_code LIKE ${searchPattern})`,
+				sql`(c.name LIKE ${searchPattern} OR c.code LIKE ${searchPattern})`,
 			);
 		}
 		if (whereQueries.year) {
-			conditions.push(sql`c.year = ${whereQueries.year}`);
+			conditions.push(sql`r.year = ${whereQueries.year}`);
 		}
 
-		// -- check if we have filters (excluding the collectionId condition)
 		const hasFilters = conditions.length > 1;
-
-		// -- count total (with cache for unfiltered queries)
 		let total = 0;
+
 		if (!hasFilters) {
-			// -- try to get cached total count for this collection
 			const countCacheKey = `collection:${collectionId}:total:count`;
 			const cachedTotal = await this.cache.get<number>(countCacheKey);
 			if (cachedTotal !== null) {
@@ -444,61 +410,40 @@ LEFT JOIN ${series} col ON cc.series_id = col.id`;
 				);
 				total = cachedTotal;
 			} else {
-				// -- fetch and cache total count for this collection
-				const countQuery = sql`
-SELECT COUNT(c.id) as total
-FROM ${carVersions} c
-LEFT JOIN ${carSeries} cc ON c.id = cc.car_version_id
-WHERE cc.series_id = ${collectionId}`;
-				const countResult = await this.db.run(countQuery);
+				const countResult = await this.db.run(
+					sql`SELECT COUNT(r.id) as total FROM ${releases} r WHERE r.collection_id = ${collectionId}`,
+				);
 				total = (countResult.results[0] as any)?.total || 0;
-				await this.cache.set(countCacheKey, total, 86_400 * 30); // Cache for 1 day
+				await this.cache.set(countCacheKey, total, 86_400 * 30);
 			}
 		} else {
-			// -- with filters, always query the count
 			let countQuery = sql`
-SELECT COUNT(c.id) as total
-FROM ${carVersions} c
-LEFT JOIN ${carSeries} cc ON c.id = cc.car_version_id`;
+SELECT COUNT(r.id) as total
+FROM ${releases} r
+LEFT JOIN ${castings} c ON r.casting_id = c.id`;
 			countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
 			const countResult = await this.db.run(countQuery);
 			total = (countResult.results[0] as any)?.total || 0;
 		}
 
-		// -- data query
-		let sqlQuery = this.buildCarsWithSeriesQuery();
-
-		// -- apply conditions
-		sqlQuery = sql`${sqlQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
-
-		// -- group by
-		sqlQuery = sql`${sqlQuery} GROUP BY c.id, c.model, c.created_at, c.updated_at`;
-
-		// -- map column names to SQL column references
 		const columnMap: Record<string, string> = {
-			model: "c.model",
-			year: "c.year",
-			createdAt: "c.created_at",
+			name: "c.name",
+			year: "r.year",
+			color: "r.color",
+			createdAt: "r.created_at",
 		};
-
 		const orderColumn = sortBy || "updated_at";
 		const orderDirection = (sortOrder || "desc").toUpperCase();
-		const sqlColumn = columnMap[orderColumn] || "c.model";
+		const sqlColumn = columnMap[orderColumn] || "c.name";
 
-		// -- apply order by, use from `sortBy` and `sortOrder` query params
+		let sqlQuery = this.buildReleasesQuery();
+		sqlQuery = sql`${sqlQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
 		sqlQuery = sql`${sqlQuery} ORDER BY ${sql.raw(sqlColumn)} ${sql.raw(orderDirection)}`;
-
-		// -- apply limit and offset, use from `page` and `limit` query params
 		sqlQuery = sql`${sqlQuery} LIMIT ${sql.raw(limit.toString())} OFFSET ${sql.raw(offset.toString())}`;
 
-		// -- execute data query
 		const result = await this.db.run(sqlQuery);
-
-		const carsWithSeries = this.mapToCarWithSeries(result.results as any[]);
-		const response = {
-			data: carsWithSeries,
-			meta: { page, limit, total },
-		};
+		const data = this.mapToReleaseWithDetails(result.results as any[]);
+		const response = { data, meta: { page, limit, total } };
 		await this.cache.set(cacheKey, response, 300);
 		return this.responseWithBookmarks(response, userId);
 	}
@@ -514,250 +459,260 @@ LEFT JOIN ${carSeries} cc ON c.id = cc.car_version_id`;
 		},
 		userId?: string,
 	): Promise<{
-		data: CarWithSeries[];
+		data: ReleaseWithDetails[];
 		meta: { page: number; limit: number; total: number };
 	}> {
-		const cacheKey = `list:${JSON.stringify({ page, limit, query })}`;
+		const cacheKey = `2list:${JSON.stringify({ page, limit, query })}`;
 		const { sortBy, sortOrder, ...whereQueries } = query;
 
-		// --------------------
-		// -- check cache first
 		const cached = await this.cache.get<{
-			data: CarWithSeries[];
+			data: ReleaseWithDetails[];
 			meta: { page: number; limit: number; total: number };
 		}>(cacheKey);
-
-		// -- return cache
-		if (cached) {
+		if (cached && cached.data.length > 0) {
 			console.log("----> LOG [CACHE] car list found in cache!");
 			return this.responseWithBookmarks(cached, userId);
 		}
-		// --------------------
-
 		const offset = (page - 1) * limit;
 		const conditions = [];
 
-		// -- where queries
 		if (whereQueries.q) {
 			const searchPattern = `%${whereQueries.q}%`;
 			conditions.push(
-				sql`(c.model LIKE ${searchPattern} OR c.toy_code LIKE ${searchPattern})`,
+				sql`(c.name LIKE ${searchPattern} OR c.code LIKE ${searchPattern})`,
 			);
 		}
 		if (whereQueries.year) {
-			conditions.push(sql`c.year = ${whereQueries.year}`);
+			conditions.push(sql`r.year = ${whereQueries.year}`);
 		}
 
-		// -- check if we have filters
 		const hasFilters = conditions.length > 0;
-
-		// -- count total (with cache for unfiltered queries)
 		let total = 0;
+
 		if (!hasFilters) {
-			// -- try to get cached total count
 			const cachedTotal = await this.cache.get<number>("cars:total:count");
-			if (cachedTotal !== null) {
+			if (cachedTotal !== null && cachedTotal > 0) {
 				console.log("----> LOG [CACHE] total car count found in cache!");
 				total = cachedTotal;
 			} else {
-				// -- fetch and cache total count
-				const countQuery = sql`SELECT COUNT(c.id) as total FROM ${carVersions} c`;
-				const countResult = await this.db.run(countQuery);
+				const countResult = await this.db.run(
+					sql`SELECT COUNT(r.id) as total FROM ${releases} r`,
+				);
 				total = (countResult.results[0] as any)?.total || 0;
-				await this.cache.set("cars:total:count", total, 86_400 * 30); // Cache for 1 day
+				await this.cache.set("cars:total:count", total, 86_400 * 30);
 			}
 		} else {
-			// -- with filters, always query the count
-			let countQuery = sql`SELECT COUNT(c.id) as total FROM ${carVersions} c`;
+			let countQuery = sql`
+SELECT COUNT(r.id) as total
+FROM ${releases} r
+LEFT JOIN ${castings} c ON r.casting_id = c.id`;
 			countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
 			const countResult = await this.db.run(countQuery);
 			total = (countResult.results[0] as any)?.total || 0;
 		}
 
-		// -- data query
-		let sqlQuery = this.buildCarsWithSeriesQuery();
+		const columnMap: Record<string, string> = {
+			name: "c.name",
+			year: "r.year",
+			color: "r.color",
+			createdAt: "r.created_at",
+		};
+		const orderColumn = sortBy || "updated_at";
+		const orderDirection = (sortOrder || "desc").toUpperCase();
+		const sqlColumn = columnMap[orderColumn] || "c.name";
 
-		// -- apply conditions
+		let sqlQuery = this.buildReleasesQuery();
 		if (hasFilters) {
 			sqlQuery = sql`${sqlQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
 		}
-
-		// -- group by
-		sqlQuery = sql`${sqlQuery} GROUP BY c.id, c.model, c.created_at, c.updated_at`;
-
-		// -- map column names to SQL column references
-		const columnMap: Record<string, string> = {
-			model: "c.model",
-			year: "c.year",
-			createdAt: "c.created_at",
-		};
-
-		const orderColumn = sortBy || "updated_at";
-		const orderDirection = (sortOrder || "desc").toUpperCase();
-		const sqlColumn = columnMap[orderColumn] || "c.model";
-
-		// -- apply order by, use from `sortBy` and `sortOrder` query params
 		sqlQuery = sql`${sqlQuery} ORDER BY ${sql.raw(sqlColumn)} ${sql.raw(orderDirection)}`;
-
-		// -- apply limit and offset, use from `page` and `limit` query params
 		sqlQuery = sql`${sqlQuery} LIMIT ${sql.raw(limit.toString())} OFFSET ${sql.raw(offset.toString())}`;
 
-		// -- execute data query
 		const result = await this.db.run(sqlQuery);
-
-		const carsWithSeries = this.mapToCarWithSeries(result.results as any[]);
-		const response = {
-			data: carsWithSeries,
-			meta: { page, limit, total },
-		};
+		const data = this.mapToReleaseWithDetails(result.results as any[]);
+		const response = { data, meta: { page, limit, total } };
 		await this.cache.set(cacheKey, response, 86_400);
 		return this.responseWithBookmarks(response, userId);
 	}
 
 	async uploadImage(
-		carVersionId: string,
+		releaseId: string,
 		image: {
 			buffer: number[] | ArrayBuffer;
 			filename: string;
 			contentType: string;
 		},
-	): Promise<CarVersion> {
-		// -- get the car to generate proper photo key
-		const car = await this.db
+	): Promise<Release> {
+		const release = await this.db
 			.select()
-			.from(carVersions)
-			.where(eq(carVersions.id, carVersionId))
+			.from(releases)
+			.where(eq(releases.id, releaseId))
 			.get();
 
-		if (!car) {
-			throw new Error(`Car with id ${carVersionId} not found`);
+		if (!release) {
+			throw new Error(`Release with id ${releaseId} not found`);
 		}
 
-		// -- if car already has an avatarUrl, delete the old image from both storages
-		if (car.avatarUrl) {
-			if (car.avatarUrl.startsWith("r2://")) {
-				await this.storage.removeObject(car.avatarUrl);
-			} else if (car.avatarUrl.includes("cloudinary.com")) {
-				// Extract public_id from Cloudinary URL and delete
+		if (release.avatarUrl) {
+			if (release.avatarUrl.startsWith("r2://")) {
+				await this.storage.removeObject(release.avatarUrl);
+			} else if (release.avatarUrl.includes("cloudinary.com")) {
 				const cloudinaryClient = await this.getCloudinaryClient();
-				const match = car.avatarUrl.match(
+				const match = release.avatarUrl.match(
 					/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/,
 				);
-				if (match) {
-					await cloudinaryClient.deleteImage(match[1]);
-				}
+				if (match) await cloudinaryClient.deleteImage(match[1]);
 			}
 		}
 
-		// -- convert buffer from number array to ArrayBuffer if needed
 		const imageBuffer = Array.isArray(image.buffer)
 			? new Uint8Array(image.buffer).buffer
 			: image.buffer;
 
-		// -- generate photo key using car details and original filename
 		const photoKey = generatePhotoKey(
-			car.toyCode,
-			car.year.toString(),
-			0,
+			release.id,
+			release.year?.toString() ?? "0",
+			release.toyIndex ?? 0,
 			image.filename,
 		);
 
-		// -- upload image to R2 for backup
 		await this.storage.uploadImageFromBinary(imageBuffer, photoKey);
 
-		// -- upload image to Cloudinary
 		const cloudinaryClient = await this.getCloudinaryClient();
 		const cloudinaryPublicId = CloudinaryClient.generatePhotoKey(
-			car.toyCode,
-			car.year.toString(),
-			0,
+			release.id,
+			release.year?.toString() ?? "0",
+			release.toyIndex ?? 0,
 		);
 
 		const cloudinaryResult = await cloudinaryClient.uploadImageFromBuffer(
 			imageBuffer,
-			{
-				public_id: cloudinaryPublicId,
-				folder: "cars",
-				overwrite: true,
-			},
+			{ public_id: cloudinaryPublicId, folder: "releases", overwrite: true },
 		);
 
-		// -- update the car with Cloudinary URL and updatedAt
 		const [updated] = await this.db
-			.update(carVersions)
-			.set({
-				avatarUrl: cloudinaryResult.secure_url,
-				updatedAt: new Date(),
-			})
-			.where(eq(carVersions.id, carVersionId))
+			.update(releases)
+			.set({ avatarUrl: cloudinaryResult.secure_url, updatedAt: new Date() })
+			.where(eq(releases.id, releaseId))
 			.returning();
 
 		return updated;
 	}
 
-	async removeImage(carVersionId: string): Promise<CarVersion> {
-		// -- get the car to check if it has an avatar
-		const car = await this.db
+	async removeImage(releaseId: string): Promise<Release> {
+		const release = await this.db
 			.select()
-			.from(carVersions)
-			.where(eq(carVersions.id, carVersionId))
+			.from(releases)
+			.where(eq(releases.id, releaseId))
 			.get();
 
-		if (!car) {
-			throw new Error(`Car with id ${carVersionId} not found`);
+		if (!release) {
+			throw new Error(`Release with id ${releaseId} not found`);
 		}
 
-		// -- if car has an avatarUrl, delete from storage
-		if (car.avatarUrl) {
-			if (car.avatarUrl.startsWith("r2://")) {
-				await this.storage.removeObject(car.avatarUrl);
-			} else if (car.avatarUrl.includes("cloudinary.com")) {
-				// Extract public_id from Cloudinary URL and delete
+		if (release.avatarUrl) {
+			if (release.avatarUrl.startsWith("r2://")) {
+				await this.storage.removeObject(release.avatarUrl);
+			} else if (release.avatarUrl.includes("cloudinary.com")) {
 				const cloudinaryClient = await this.getCloudinaryClient();
-				const match = car.avatarUrl.match(
+				const match = release.avatarUrl.match(
 					/\/upload\/(?:v\d+\/)?(.+?)(?:\.\w+)?$/,
 				);
-				if (match) {
-					await cloudinaryClient.deleteImage(match[1]);
-				}
+				if (match) await cloudinaryClient.deleteImage(match[1]);
 			}
 		}
 
-		// -- update the car to set avatarUrl to null
 		const [updated] = await this.db
-			.update(carVersions)
-			.set({
-				avatarUrl: null,
-				updatedAt: new Date(),
-			})
-			.where(eq(carVersions.id, carVersionId))
+			.update(releases)
+			.set({ avatarUrl: null, updatedAt: new Date() })
+			.where(eq(releases.id, releaseId))
 			.returning();
 
 		return updated;
 	}
 
-	async sync(carVersionId: string): Promise<CarVersion> {
-		// -- get the car to check if it has an avatar
-		const car = await this.db
+	// Pulls casting + designer data from Fandom wiki and syncs it to the DB.
+	async sync(castingId: string): Promise<Casting> {
+		const casting = await this.db
 			.select()
-			.from(carVersions)
-			.where(eq(carVersions.id, carVersionId))
+			.from(castings)
+			.where(eq(castings.id, castingId))
 			.get();
 
-		if (!car) {
-			throw new Error(`Car with id ${carVersionId} not found`);
+		if (!casting) {
+			throw new Error(`Casting with id ${castingId} not found`);
 		}
 
-		if (!car.wikiSlug && car.model.endsWith("(2nd Color)")) {
-			throw new Error(`This car currently does not support wiki syncing.`);
-		}
-
-		// -- wiki slug
-		const wikiSlug = car.wikiSlug ? car.wikiSlug : generateSlug(car.model);
-
+		const wikiSlug = casting.wikiSlug ?? generateSlug(casting.name);
 		const provider = new FandomProvider(this.env);
 		const wikiCar = await provider.getCar(wikiSlug);
 
-		return wikiCar;
+		// -- upsert designer
+		let designer = await this.db
+			.select()
+			.from(designers)
+			.where(eq(designers.wikiSlug, wikiCar.designer.slug))
+			.get();
+
+		if (!designer) {
+			const [inserted] = await this.db
+				.insert(designers)
+				.values({
+					name: wikiCar.designer.name,
+					wikiSlug: wikiCar.designer.slug,
+				})
+				.returning();
+			designer = inserted;
+			console.log("----> LOG [CASTING:SYNC] designer inserted!", designer);
+		}
+
+		// -- link designer to casting if not already linked
+		const existingLink = await this.db
+			.select()
+			.from(castingDesigners)
+			.where(
+				and(
+					eq(castingDesigners.castingId, castingId),
+					eq(castingDesigners.designerId, designer.id),
+				),
+			)
+			.get();
+
+		if (!existingLink) {
+			await this.db
+				.insert(castingDesigners)
+				.values({ castingId, designerId: designer.id, role: "lead" });
+		}
+
+		// -- upload images
+		const imgs: string[] = [];
+		for (let i = 0; i < wikiCar.photo_url.length; i++) {
+			imgs.push(
+				await this.storage.uploadImageFromUrl(
+					wikiCar.photo_url[i],
+					generatePhotoKeyByArr([
+						wikiCar?.model?.code || "unknown",
+						"avatars",
+						`img-${i.toString()}`,
+					]),
+				),
+			);
+		}
+
+		// -- update casting record
+		const [updated] = await this.db
+			.update(castings)
+			.set({
+				name: wikiCar.model.name,
+				avatarUrl: imgs[0] ?? casting.avatarUrl,
+				wikiSlug: wikiCar.model.slug,
+				code: wikiCar.model.code,
+				updatedAt: new Date(),
+			})
+			.where(eq(castings.id, castingId))
+			.returning();
+
+		console.log("----> LOG [CASTING:SYNC] casting updated!", updated);
+		return updated;
 	}
 }

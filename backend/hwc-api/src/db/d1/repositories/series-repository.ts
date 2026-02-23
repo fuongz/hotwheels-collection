@@ -1,18 +1,18 @@
 import { eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
-import { type NewSeries, type Series, series } from "../schema";
+import { type Collection, collections, type NewCollection } from "../schema";
 
-export class SeriesRepository {
+export class CollectionsRepository {
 	constructor(private db: DrizzleD1Database) {}
 
 	async upsert(
-		data: Omit<NewSeries, "id" | "createdAt" | "updatedAt">,
-	): Promise<Series> {
+		data: Omit<NewCollection, "id" | "createdAt" | "updatedAt">,
+	): Promise<Collection> {
 		const [result] = await this.db
-			.insert(series)
+			.insert(collections)
 			.values(data)
 			.onConflictDoUpdate({
-				target: series.name,
+				target: collections.code,
 				set: {
 					...data,
 					updatedAt: new Date(),
@@ -22,19 +22,31 @@ export class SeriesRepository {
 		return result;
 	}
 
-	async findByName(name: string): Promise<Series | undefined> {
+	async findByCode(code: string): Promise<Collection | undefined> {
 		return await this.db
 			.select()
-			.from(series)
-			.where(eq(series.name, name))
+			.from(collections)
+			.where(eq(collections.code, code))
 			.get();
 	}
 
-	async findById(id: string): Promise<Series | undefined> {
-		return await this.db.select().from(series).where(eq(series.id, id)).get();
+	async findByName(name: string): Promise<Collection | undefined> {
+		return await this.db
+			.select()
+			.from(collections)
+			.where(eq(collections.name, name))
+			.get();
 	}
 
-	async getAll(): Promise<Series[]> {
-		return await this.db.select().from(series).all();
+	async findById(id: number): Promise<Collection | undefined> {
+		return await this.db
+			.select()
+			.from(collections)
+			.where(eq(collections.id, id))
+			.get();
+	}
+
+	async getAll(): Promise<Collection[]> {
+		return await this.db.select().from(collections).all();
 	}
 }

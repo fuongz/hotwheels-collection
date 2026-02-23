@@ -9,6 +9,9 @@
 	},
 	"preview_urls": false,
 	"workers_dev": false,
+	"images": {
+		"binding": "IMAGES"
+	},
 	"routes": [
 		{
 			"custom_domain": true,

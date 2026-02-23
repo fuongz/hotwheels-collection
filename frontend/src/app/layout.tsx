@@ -5,6 +5,7 @@ import type React from "react";
 import "../styles/globals.css";
 import "react-photo-view/dist/react-photo-view.css";
 import { AuthProvider } from "@/components/auth";
+import { Footer } from "@/components/layout/footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -38,6 +39,7 @@ export default function RootLayout({
 					<NuqsAdapter>
 						<AuthProvider>{children}</AuthProvider>
 					</NuqsAdapter>
+					<Footer />
 					<Toaster />
 				</ThemeProvider>
 			</body>

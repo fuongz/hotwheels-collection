@@ -1,1 +1,0 @@
-ALTER TABLE `series` ADD `wiki_slug` text;

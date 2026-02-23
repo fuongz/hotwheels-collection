@@ -10,9 +10,9 @@ export class UserCarsRepository {
 		this.db = dbClient(env.DB);
 	}
 
-	async findByUserIdAndCarId(
+	async findByUserIdAndReleaseId(
 		userId: string,
-		carVersionId: string,
+		releaseId: string,
 	): Promise<UserCar | undefined> {
 		return await this.db
 			.select()
@@ -20,15 +20,15 @@ export class UserCarsRepository {
 			.where(
 				and(
 					eq(userCars.userId, userId),
-					eq(userCars.carVersionId, carVersionId),
+					eq(userCars.releaseId, releaseId),
 				),
 			)
 			.get();
 	}
 
-	async findByUserIdAndCarIds(
+	async findByUserIdAndReleaseIds(
 		userId: string,
-		carVersionIds: string[],
+		releaseIds: string[],
 	): Promise<UserCar[]> {
 		return await this.db
 			.select()
@@ -36,7 +36,7 @@ export class UserCarsRepository {
 			.where(
 				and(
 					eq(userCars.userId, userId),
-					inArray(userCars.carVersionId, carVersionIds),
+					inArray(userCars.releaseId, releaseIds),
 				),
 			)
 			.all();
@@ -45,9 +45,9 @@ export class UserCarsRepository {
 	async upsert(
 		data: Omit<NewUserCar, "id" | "createdAt" | "updatedAt">,
 	): Promise<UserCar> {
-		const existing = await this.findByUserIdAndCarId(
+		const existing = await this.findByUserIdAndReleaseId(
 			data.userId,
-			data.carVersionId,
+			data.releaseId,
 		);
 		if (existing) {
 			const [updated] = await this.db
@@ -65,13 +65,13 @@ export class UserCarsRepository {
 		return created;
 	}
 
-	async delete(userId: string, carVersionId: string): Promise<void> {
+	async delete(userId: string, releaseId: string): Promise<void> {
 		await this.db
 			.delete(userCars)
 			.where(
 				and(
 					eq(userCars.userId, userId),
-					eq(userCars.carVersionId, carVersionId),
+					eq(userCars.releaseId, releaseId),
 				),
 			);
 	}
