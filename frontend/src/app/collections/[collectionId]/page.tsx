@@ -64,14 +64,13 @@ function CollectionPageContent({ collectionId }: CollectionPageContentProps) {
 	const meta = response?.meta;
 	const isError = error;
 
-	// Get series name from the first car's series data
+	// Get series name from the first car's collection data
 	const seriesName = useMemo(() => {
-		if (apiCars && apiCars.length > 0 && apiCars[0].series?.length > 0) {
-			const series = apiCars[0].series.find((s) => s.id === collectionId);
-			return series?.name;
+		if (apiCars && apiCars.length > 0) {
+			return apiCars[0].collection?.name ?? null;
 		}
 		return null;
-	}, [apiCars, collectionId]);
+	}, [apiCars]);
 
 	// Calculate total pages
 	const totalPages = meta ? Math.ceil(meta.total / meta.limit) : 1;
