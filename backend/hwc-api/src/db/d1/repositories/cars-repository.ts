@@ -462,7 +462,7 @@ LEFT JOIN ${castings} c ON r.casting_id = c.id`;
 		data: ReleaseWithDetails[];
 		meta: { page: number; limit: number; total: number };
 	}> {
-		const cacheKey = `2list:${JSON.stringify({ page, limit, query })}`;
+		const cacheKey = `list:${JSON.stringify({ page, limit, query })}`;
 		const { sortBy, sortOrder, ...whereQueries } = query;
 
 		const cached = await this.cache.get<{
