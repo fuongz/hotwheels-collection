@@ -3,7 +3,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { CacheService } from "../../../cache/kv/cache.service";
 import { FandomProvider, generateSlug } from "../../../providers/fandom";
 import {
-	CloudinaryClient,
+	type CloudinaryClient,
 	createCloudinaryClient,
 } from "../../../storages/cloudinary";
 import {
@@ -576,23 +576,11 @@ LEFT JOIN ${castings} c ON r.casting_id = c.id`;
 			image.filename,
 		);
 
-		await this.storage.uploadImageFromBinary(imageBuffer, photoKey);
-
-		const cloudinaryClient = await this.getCloudinaryClient();
-		const cloudinaryPublicId = CloudinaryClient.generatePhotoKey(
-			release.id,
-			release.year?.toString() ?? "0",
-			release.toyIndex ?? 0,
-		);
-
-		const cloudinaryResult = await cloudinaryClient.uploadImageFromBuffer(
-			imageBuffer,
-			{ public_id: cloudinaryPublicId, folder: "releases", overwrite: true },
-		);
+		const r2Url = await this.storage.uploadImageFromBinary(imageBuffer, photoKey);
 
 		const [updated] = await this.db
 			.update(releases)
-			.set({ avatarUrl: cloudinaryResult.secure_url, updatedAt: new Date() })
+			.set({ avatarUrl: r2Url, updatedAt: new Date() })
 			.where(eq(releases.id, releaseId))
 			.returning();
 

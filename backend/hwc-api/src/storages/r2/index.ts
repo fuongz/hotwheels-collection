@@ -90,16 +90,10 @@ export function generatePhotoKey(
 	toyCode: string,
 	year: string,
 	index: number,
-	url: string,
+	_url: string,
 ): string {
-	// Extract extension from URL or default to jpg
-	const extension = url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)?.[1] || "jpg";
-
-	// Sanitize toy code for file path
 	const sanitizedCode = toyCode.replace(/[^a-zA-Z0-9-]/g, "_");
-
-	// Generate path: cars/{year}/{toyCode}/{index}.{ext}
-	return `cars/${year}/${sanitizedCode}/${index}.${extension}`;
+	return `cars/${year}/${sanitizedCode}/${index}.avif`;
 }
 
 export function generatePhotoKeyByArr(arr: string[]): string {
@@ -155,26 +149,27 @@ export class StorageService {
 		key: string,
 	): Promise<string> {
 		if (!this.bucket) throw new Error("Storage not found");
-		try {
-			// Convert to WebP format
-			const webpBuffer = await convertToWebP(imageBuffer);
 
-			// Upload to R2 with WebP content type
-			await this.bucket.put(key, webpBuffer, {
-				httpMetadata: {
-					contentType: "image/webp",
-				},
-			});
+		const stream = new Response(imageBuffer).body as ReadableStream<Uint8Array>;
+		const response = await this.imageTransformation
+			.input(stream)
+			.transform({ width: 1024, height: 1024 })
+			.output({ format: "image/avif" });
 
-			console.log(`----> LOG [R2] Uploaded image to R2: ${key}`);
-			return `r2://${key}`;
-		} catch (error) {
-			console.error(
-				`----> ERROR [R2] Failed to upload image to R2: ${key}`,
-				error,
+		const transformedResponse = response.response();
+		if (!transformedResponse.ok) {
+			throw new Error(
+				`Failed to transform image: ${transformedResponse.statusText}`,
 			);
-			throw error;
 		}
+		const arrBuffer = await transformedResponse.arrayBuffer();
+
+		await this.bucket.put(key, arrBuffer, {
+			httpMetadata: { contentType: "image/avif" },
+		});
+
+		console.log(`----> LOG [R2] Uploaded image to R2: ${key}`);
+		return `r2://${key}`;
 	}
 
 	async removeObject(key: string) {
